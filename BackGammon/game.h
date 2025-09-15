@@ -20,6 +20,12 @@ struct Zet // 1..4 stappen
     int score;
 };
 
+struct BewaarZet
+{
+    int zetnr;
+    Zet zetten[4];
+};
+
 class Game_t
 {
 private:
@@ -43,7 +49,8 @@ private:
             0};
     std::vector<Zet> zetten;
     std::vector<Zet> halfzetten;       
-    std::vector<Stap> stappen[4]; 
+    std::vector<Stap> stappen[4];
+    BewaarZet bewaar; 
     Zet bestezet = Zet();
     int bestescore = 0; // hoe lager hoe beter
     int ogen[4];        // houdt rekening met dubbel gooien
@@ -63,7 +70,8 @@ private:
     std::string tekstfout = "";
     std::string instructie = "";
     std::string geworpen = "";
-    std::string gezet = "";
+    std::string gezet[4] = {"", "", "", ""};
+    int gezetteller = 0;
     bool kegelvan[25];
     bool kegelnaar[25];
 

@@ -33,6 +33,8 @@
 *.lib
 
 # Executables
+*.exe
+*.exe.dSYM
 *.out
 *.app
 

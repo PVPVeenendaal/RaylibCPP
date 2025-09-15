@@ -20,7 +20,7 @@
 #endif
 
 // version
-const std::string version = "0.80";
+const std::string version = "0.90";
 
 // sizes
 
@@ -571,7 +571,7 @@ void Game_t::Do_Ai_Move()
         if (zetten.size() == 0)
         {
             tekstinfo = "Ai kan niet zetten";
-            instructie = "Klik op F6 om verder te gaan ";
+            instructie = "Klik op F6 om verder te gaan";
             spelstatus = Spelerstop;
             return;
         }
@@ -579,9 +579,9 @@ void Game_t::Do_Ai_Move()
     BesteZet(Ai);
     DoeZet(Ai, &bestezet); // geen score meer nodig
     opening = false;
-    gezet += ZetToString(&bestezet);
+    gezet[gezetteller++] = ZetToString(&bestezet);
     tekstinfo = "Ai is klaar met zijn beurt";
-    instructie = "Klik op F6 om verder te gaan ";
+    instructie = "Klik op F6 om verder te gaan";
     spelstatus = Spelerstop;
 }
 
@@ -593,7 +593,9 @@ Game_t::Game_t()
     for (int i = 0; i < 4; ++i)
     {
         stappen[i] = std::vector<Stap>();
+        ogen[i] = 0;
     }
+    bewaar = BewaarZet();
     teller = 0;
 #ifdef NDEBUG
     speler_ad_beurt = GetRandomValue(BGSpeler, Ai);
@@ -627,10 +629,41 @@ void Game_t::KeyPress(int key)
         enter_visible = false;
         spelstatus = Spelspeel;
     }
-    if (spelstatus == Spelerspeel && speler_ad_beurt == BGSpeler && key == KEY_F7)
+    if (spelstatus == Spelerspeel && speler_ad_beurt == BGSpeler && key == KEY_F8)
     {
         kegel_sel_from = -1;
         kegel_sel_to = -1;
+        InitVlaggen();
+        Zetkegelvan();
+        tekstinfo = geworpen;
+        tekstfout = "";
+        if (geslagen[BGSpeler] > 0)
+        {
+            instructie = "Click op een geslagen steen om deze te selecteren";
+        }
+        else
+        {
+            instructie = "Click op een steen in de kegels met een groene ster om deze te selecteren";
+        }
+    }
+    if (spelstatus == Spelerspeel && speler_ad_beurt == BGSpeler && key == KEY_F7 && bewaar.zetnr > 0)
+    {
+        kegel_sel_from = -1;
+        kegel_sel_to = -1;
+        Zet z = bewaar.zetten[bewaar.zetnr - 1];
+        int o = z.stappen[0].ogen;
+        NeemZetTerug(BGSpeler, &z);
+        for (int i = 0; i < 4; ++i)
+        {
+            if (ogen[i] == 0)
+            {
+                ogen[i] = o;
+                break;
+            }
+        }
+        --bewaar.zetnr;
+        --gezetteller;
+        BepaalZetten(BGSpeler);
         InitVlaggen();
         Zetkegelvan();
         tekstinfo = geworpen;
@@ -719,8 +752,9 @@ void Game_t::MousePress(int x, int y)
                     Zet z = Zet();
                     InitZet(&z);
                     MaakStap(0, kegelpos, posgeslagen, 25 - kegelpos, &z);
+                    bewaar.zetten[bewaar.zetnr++] = z;
                     DoeZet(BGSpeler, &z);
-                    gezet += ZetToString(&z);
+                    gezet[gezetteller++] = ZetToString(&z);
                     PasOgenAan(z.stappen[0].ogen);
                     int retFlag;
                     VervolgZetten(retFlag);
@@ -768,7 +802,7 @@ void Game_t::MousePress(int x, int y)
                         Zet z = Zet();
                         InitZet(&z);
                         AddStap(stapvan, &z);
-                        gezet += ZetToString(&z);
+                        gezet[gezetteller] = ZetToString(&z);
                         PasOgenAan(z.stappen[0].ogen);
                         int retFlag;
                         VervolgZetten(retFlag);
@@ -818,7 +852,7 @@ void Game_t::MousePress(int x, int y)
                     else
                     {
                         tekstinfo = "Je hebt een steen op " + std::to_string(kegelpos) + " geselecteed";
-                        instructie = "Kies een kegel met gele ster om deze te plaatsen met F7 maak je de keuze ongedaan.";
+                        instructie = "Kies een kegel met gele ster om deze te plaatsen met F8 maak je de keuze ongedaan.";
                         tekstfout = "";
                         InitVlagVan();
                         kegelvan[kegel_sel_from] = true;
@@ -838,8 +872,9 @@ void Game_t::MousePress(int x, int y)
                             Zet z = Zet();
                             InitZet(&z);
                             MaakStap(kegel_sel_from, kegel_sel_to, stap.geslagen, stap.ogen, &z);
+                            bewaar.zetten[bewaar.zetnr++] = z;
                             DoeZet(BGSpeler, &z);
-                            gezet += ZetToString(&z);
+                            gezet[gezetteller++] = ZetToString(&z);
                             PasOgenAan(z.stappen[0].ogen);
                             int retFlag;
                             VervolgZetten(retFlag);
@@ -993,7 +1028,7 @@ void Game_t::Update()
     }
     if (spelstatus == Spelerstart)
     {
-        gezet = "Gezet: ";
+        gezetteller = 0;
         InitVlaggen();
         speler_continue = false;
         ++speler_ad_beurt;
@@ -1343,10 +1378,19 @@ void Game_t::Draw(Images_t *img)
             20,
             BLACK);
     }
-    if (gezet != "")
+    if (gezetteller > 0)
     {
+        std::string text = "Gezet: ";
+        for (int i = 0; i < gezetteller; ++i)
+        {
+            text += gezet[i] + " ";
+        }
+        if (speler_ad_beurt == BGSpeler && bewaar.zetnr > 0)
+        {
+            text += " --- Click op F7 om een zet terug te nemen";
+        }
         DrawText(
-            gezet.c_str(),
+            text.c_str(),
             REST_SIZE + KOLOM_SIZE * 4,
             REST_SIZE * 5 + 9 * KOLOM_SIZE,
             20,
