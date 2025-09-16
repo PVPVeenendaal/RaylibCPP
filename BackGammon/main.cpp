@@ -338,7 +338,7 @@ const int steenwaarde[] = {0, 1, -1};
 #define ABS(a) ((a) < 0 ? -(a) : (a))
 #define SPL(a) ((a) == 0 ? Niemand : (a) < 0 ? Ai \
                                              : BGSpeler)
-#define ONB(a) ((a) >= 1 && (a) <= 24) 
+#define ONB(a) ((a) >= 1 && (a) <= 24)
 
 //************************************************************************************************
 // main
@@ -520,6 +520,7 @@ void Game_t::Dice_Roll()
     ogen[0] = GetRandomValue(1, 6); // zet uit bij een test
     ogen[1] = GetRandomValue(1, 6); // zet uit bij een test
 #endif
+    tekstinfo = "";
     if (ogen[1] > ogen[0])
     {
         int tmp = ogen[0];
@@ -565,6 +566,7 @@ void Game_t::Dice_Roll()
 /// @param speler eSpeler, speler aan de beurt
 void Game_t::Do_Ai_Move()
 {
+    aigezet = false;
     if (!opening)
     {
         BepaalZetten(Ai);
@@ -579,7 +581,7 @@ void Game_t::Do_Ai_Move()
     BesteZet(Ai);
     DoeZet(Ai, &bestezet); // geen score meer nodig
     opening = false;
-    gezet[gezetteller++] = ZetToString(&bestezet);
+    aigezet = true;
     tekstinfo = "Ai is klaar met zijn beurt";
     instructie = "Klik op F6 om verder te gaan";
     spelstatus = Spelerstop;
@@ -624,68 +626,92 @@ Game_t::~Game_t()
 /// @param key keycode
 void Game_t::KeyPress(int key)
 {
-    if (enter_visible && key == KEY_ENTER)
+    if (key == KEY_ENTER)
     {
-        enter_visible = false;
-        spelstatus = Spelspeel;
-    }
-    if (spelstatus == Spelerspeel && speler_ad_beurt == BGSpeler && key == KEY_F8)
-    {
-        kegel_sel_from = -1;
-        kegel_sel_to = -1;
-        InitVlaggen();
-        Zetkegelvan();
-        tekstinfo = geworpen;
-        tekstfout = "";
-        if (geslagen[BGSpeler] > 0)
+        if (enter_visible)
         {
-            instructie = "Click op een geslagen steen om deze te selecteren";
-        }
-        else
-        {
-            instructie = "Click op een steen in de kegels met een groene ster om deze te selecteren";
+            enter_visible = false;
+            spelstatus = Spelspeel;
         }
     }
-    if (spelstatus == Spelerspeel && speler_ad_beurt == BGSpeler && key == KEY_F7 && bewaar.zetnr > 0)
+    if (key == KEY_F8)
     {
-        kegel_sel_from = -1;
-        kegel_sel_to = -1;
-        Zet z = bewaar.zetten[bewaar.zetnr - 1];
-        int o = z.stappen[0].ogen;
-        NeemZetTerug(BGSpeler, &z);
-        for (int i = 0; i < 4; ++i)
+        if (spelstatus == Spelerspeel && speler_ad_beurt)
         {
-            if (ogen[i] == 0)
+            kegel_sel_from = -1;
+            kegel_sel_to = -1;
+            InitVlaggen();
+            Zetkegelvan();
+            tekstinfo = geworpen;
+            tekstfout = "";
+            if (geslagen[BGSpeler] > 0)
             {
-                ogen[i] = o;
-                break;
+                instructie = "Click op een geslagen steen om deze te selecteren";
+            }
+            else
+            {
+                instructie = "Click op een steen in de kegels met een groene ster om deze te selecteren";
             }
         }
-        --bewaar.zetnr;
-        --gezetteller;
-        BepaalZetten(BGSpeler);
-        InitVlaggen();
-        Zetkegelvan();
-        tekstinfo = geworpen;
-        tekstfout = "";
-        if (geslagen[BGSpeler] > 0)
+    }
+    if (key == KEY_F7)
+    {
+        if ((spelstatus == Spelerspeel || spelstatus == Spelerstop) && speler_ad_beurt == BGSpeler && bewaar.zetnr > 0)
         {
-            instructie = "Click op een geslagen steen om deze te selecteren";
-        }
-        else
-        {
-            instructie = "Click op een steen in de kegels met een groene ster om deze te selecteren";
+            kegel_sel_from = -1;
+            kegel_sel_to = -1;
+            Zet z = bewaar.zetten[bewaar.zetnr - 1];
+            int o = z.stappen[0].ogen;
+            NeemZetTerug(BGSpeler, &z);
+            for (int i = 0; i < 4; ++i)
+            {
+                if (ogen[i] == 0)
+                {
+                    ogen[i] = o;
+                    break;
+                }
+            }
+            if (ogen[0] > 0 && ogen[1] > 0 && ogen[0] != ogen[1])
+            {
+                int tmp = ogen[0];
+                ogen[0] = ogen[1];
+                ogen[1] = tmp;
+            }
+            --bewaar.zetnr;
+            if (spelstatus == Spelerstop)
+            {
+                spelstatus = Spelerspeel;
+            }
+            BepaalZetten(BGSpeler);
+            InitVlaggen();
+            Zetkegelvan();
+            tekstinfo = geworpen;
+            tekstfout = "";
+            if (geslagen[BGSpeler] > 0)
+            {
+                instructie = "Click op een geslagen steen om deze te selecteren";
+            }
+            else
+            {
+                instructie = "Click op een steen in de kegels met een groene ster om deze te selecteren";
+            }
         }
     }
-    if (spelstatus == Spelerstop && key == KEY_F6)
+    if (key == KEY_F6)
     {
-        tekstfout = "";
-        speler_continue = true;
+        if (spelstatus == Spelerstop)
+        {
+            tekstfout = "";
+            speler_continue = true;
+        }
     }
-    if (spelstatus == Spelstop && key == KEY_F5)
+    if (key == KEY_F5)
     {
-        tekstfout = "";
-        spel_continue = true;
+        if (spelstatus == Spelstop)
+        {
+            tekstfout = "";
+            spel_continue = true;
+        }
     }
 }
 
@@ -754,7 +780,6 @@ void Game_t::MousePress(int x, int y)
                     MaakStap(0, kegelpos, posgeslagen, 25 - kegelpos, &z);
                     bewaar.zetten[bewaar.zetnr++] = z;
                     DoeZet(BGSpeler, &z);
-                    gezet[gezetteller++] = ZetToString(&z);
                     PasOgenAan(z.stappen[0].ogen);
                     int retFlag;
                     VervolgZetten(retFlag);
@@ -802,7 +827,6 @@ void Game_t::MousePress(int x, int y)
                         Zet z = Zet();
                         InitZet(&z);
                         AddStap(stapvan, &z);
-                        gezet[gezetteller] = ZetToString(&z);
                         PasOgenAan(z.stappen[0].ogen);
                         int retFlag;
                         VervolgZetten(retFlag);
@@ -874,7 +898,6 @@ void Game_t::MousePress(int x, int y)
                             MaakStap(kegel_sel_from, kegel_sel_to, stap.geslagen, stap.ogen, &z);
                             bewaar.zetten[bewaar.zetnr++] = z;
                             DoeZet(BGSpeler, &z);
-                            gezet[gezetteller++] = ZetToString(&z);
                             PasOgenAan(z.stappen[0].ogen);
                             int retFlag;
                             VervolgZetten(retFlag);
@@ -1028,7 +1051,7 @@ void Game_t::Update()
     }
     if (spelstatus == Spelerstart)
     {
-        gezetteller = 0;
+        bewaar.zetnr = 0;
         InitVlaggen();
         speler_continue = false;
         ++speler_ad_beurt;
@@ -1378,23 +1401,41 @@ void Game_t::Draw(Images_t *img)
             20,
             BLACK);
     }
-    if (gezetteller > 0)
+    if (speler_ad_beurt == BGSpeler)
     {
-        std::string text = "Gezet: ";
-        for (int i = 0; i < gezetteller; ++i)
+        if (bewaar.zetnr > 0)
         {
-            text += gezet[i] + " ";
+            std::string text = "Gezet: ";
+            for (int i = 0; i < bewaar.zetnr; ++i)
+            {
+                Zet z = bewaar.zetten[i];
+                text += ZetToString(&z) + " ";
+            }
+            if (speler_ad_beurt == BGSpeler && bewaar.zetnr > 0)
+            {
+                text += " --- Click op F7 om een zet terug te nemen";
+            }
+            DrawText(
+                text.c_str(),
+                REST_SIZE + KOLOM_SIZE * 4,
+                REST_SIZE * 5 + 9 * KOLOM_SIZE,
+                20,
+                BLACK);
         }
-        if (speler_ad_beurt == BGSpeler && bewaar.zetnr > 0)
+    }
+    else
+    {
+        if (aigezet)
         {
-            text += " --- Click op F7 om een zet terug te nemen";
+            std::string text = "Gezet: " + ZetToString(&bestezet);
+
+            DrawText(
+                text.c_str(),
+                REST_SIZE + KOLOM_SIZE * 4,
+                REST_SIZE * 5 + 9 * KOLOM_SIZE,
+                20,
+                BLACK);
         }
-        DrawText(
-            text.c_str(),
-            REST_SIZE + KOLOM_SIZE * 4,
-            REST_SIZE * 5 + 9 * KOLOM_SIZE,
-            20,
-            BLACK);
     }
     if (tekstinfo != "")
     {

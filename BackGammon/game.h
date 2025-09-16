@@ -52,6 +52,7 @@ private:
     std::vector<Stap> stappen[4];
     BewaarZet bewaar; 
     Zet bestezet = Zet();
+    bool aigezet = false;
     int bestescore = 0; // hoe lager hoe beter
     int ogen[4];        // houdt rekening met dubbel gooien
     int keep[4];        // backup van ogen
@@ -70,8 +71,6 @@ private:
     std::string tekstfout = "";
     std::string instructie = "";
     std::string geworpen = "";
-    std::string gezet[4] = {"", "", "", ""};
-    int gezetteller = 0;
     bool kegelvan[25];
     bool kegelnaar[25];
 
