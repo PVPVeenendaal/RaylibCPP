@@ -11,4 +11,4 @@ Add libraylib.a file (c:\raylib\raylib\src\libraylib.a) into lib folder, then ru
 Debug:
 g++ main.cpp -o draughts.exe -O1 -Wall -std=c++17 -Wno-missing-braces -L ./lib/ -lraylib -lopengl32 -lgdi32 -lwinmm
 Release:
-g++ main.cpp -o windraughts.exe -O2 -DNDEBUG -Wall -std=c++17 -Wno-missing-braces -L ./lib/ -lraylib -lopengl32 -lgdi32 -lwinmm
+g++ main.cpp -o windraughts.exe -O2 -DNDEBUG -std=c++17 -Wno-missing-braces -L ./lib/ -lraylib -lopengl32 -lgdi32 -lwinmm
