@@ -6,6 +6,7 @@ Release:
 eval g++ main.cpp -O2 -DNDEBUG -framework IOKit -framework Cocoa -framework OpenGL $(pkg-config --libs --cflags raylib) -o mactictactoe.exe
 
 Windows: 
+
 Add libraylib.a file (c:\raylib\raylib\src\libraylib.a) into lib folder, then run the following command:
 Debug:
 g++ main.cpp -o tictactoe.exe -O1 -Wall -std=c++17 -Wno-missing-braces -L ./lib/ -lraylib -lopengl32 -lgdi32 -lwinmm
