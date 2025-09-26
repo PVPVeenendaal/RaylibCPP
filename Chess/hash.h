@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "bitboard.h"
 
 typedef struct 
@@ -14,3 +15,5 @@ typedef struct
 extern void init_random_keys(hash_data *gen);
 extern unsigned int get_random_U32_number(hash_data *gen);
 extern U64 get_random_U64_number(hash_data *gen);
+
+typedef std::vector<U64> Hash_data_table;

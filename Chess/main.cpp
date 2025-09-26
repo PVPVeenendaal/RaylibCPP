@@ -5,7 +5,7 @@
 #include "bitboard.h"
 
 // version
-const std::string version = "0.60";
+const std::string version = "0.70";
 const std::string title = "Chess in Raylib-C++ (C)2025 Peter Veenendaal; versie: " + version;
 const std::string pieces[12] = {
 	"PawnW",
@@ -89,6 +89,24 @@ std::string square_to_coordinates[] = {
 	"h1",
 	"out"};
 
+enum eGamestate
+{
+	StartGame,
+	PlayGame,
+	StopGame,
+};
+
+const std::string text_game_end[8] = {
+	"",
+	"wit staat schaakmat en verliest",
+	"zwart staat schaakmat en verliest",
+	"wit staat pat, het is remise",
+	"zwart staat pat, het is remise",
+	"het is renise door 50 zetten regel",
+	"het is remise door 3 zetten regel",
+	"het is remise door materiaal"
+};
+
 // ------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------
@@ -105,8 +123,11 @@ int main()
 	int selectpiece = -1;
 	int selectsquare = -1;
 	int promotionmove = 0;
-	U64 canmove;
-	U64 options;
+	U64 canmove = 0ULL;
+	U64 options = 0ULL;
+	bool reversed = false;
+	int gamestate = StartGame;
+	int game_end = 0;
 	// initialize
 	InitWindow(SCREENWIDTH, SCREENHEIGHT, title.c_str());
 	Texture2D table = LoadTexture("./assets/Table.png");
@@ -123,7 +144,9 @@ int main()
 		img_pieces[i].width = PIECESIZE;
 		img_pieces[i].height = PIECESIZE;
 	}
-
+	Texture2D choice = LoadTexture("./assets/Choice.png");
+	choice.width = PIECESIZE;
+	choice.height = PIECESIZE; 
 	SetTargetFPS(10);
 
 	// mainloop
@@ -133,6 +156,11 @@ int main()
 		for (int i = 0; i < 64; ++i)
 		{
 			DRAWBOARD[i] = brdobj->GetPiece(i);
+		}
+		if (brdobj->GetChessBoard()->gameover)
+		{
+			gamestate = StopGame;
+			game_end = brdobj->GetChessBoard()->gameover;
 		}
 
 		// draw
@@ -162,6 +190,10 @@ int main()
 			for (int x = 0; x < 8; ++x)
 			{
 				int sqr = y * 8 + x;
+				if (reversed)
+				{
+					sqr = 63 - sqr;
+				}
 				if (get_bit(brdobj->GetChessBoard()->all_options[brdobj->GetChessBoard()->side], sqr))
 				{
 					DrawRectangleLines(
@@ -235,6 +267,19 @@ int main()
 			}
 			DrawText("Kies het promotie stuk", 5 * SQUARESIZE + 24, 8 * SQUARESIZE + 36, 20, YELLOW);
 		}
+		if (gamestate == StartGame || gamestate == StopGame)
+		{
+			DrawTexture(
+				choice,
+				24,
+				8 * SQUARESIZE + 44,
+				RAYWHITE);
+			DrawText("Kies kleur: F5 = Wit, F6 = Zwart", 24 + SQUARESIZE, 8 * SQUARESIZE + 56, 20, YELLOW);
+		}
+		if (gamestate == StopGame)
+		{
+			DrawText(text_game_end[game_end].c_str(), 24 + SQUARESIZE, 8 * SQUARESIZE + 36, 20, PURPLE);
+		}
 		EndDrawing();
 
 		// keypress
@@ -243,14 +288,34 @@ int main()
 		}
 		else if (IsKeyPressed(KEY_F5))
 		{
+			if (reversed)
+			{
+				reversed = false;
+				brdobj->New_Game();
+			
+			}
+			gamestate = PlayGame;
 		}
-
+		else if (IsKeyPressed(KEY_F6))
+		{
+			reversed = true;
+			brdobj->New_Game();  
+			gamestate = PlayGame;
+		}
 		// Mouse Press
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 		{
+			if (gamestate == StartGame || gamestate == StopGame)
+			{
+				continue;
+			}
 			int x = (int)(GetMouseX() - 24) / SQUARESIZE;
 			int y = (int)(GetMouseY() - 24) / SQUARESIZE;
 			int sqr = (x >= 0 && x <= 7 && y >= 0 && y <= 7) ? y * 8 + x : -1;
+			if (reversed)
+			{
+				sqr = 63 - sqr;
+			}
 			int psqr = -1;
 			if (promotionmove)
 			{
@@ -302,10 +367,12 @@ int main()
 	}
 
 	// clean up
+	delete brdobj;
 	for (int i = 0; i < 12; ++i)
 	{
 		UnloadTexture(img_pieces[i]);
 	}
+	UnloadTexture(choice);
 	UnloadTexture(table);
 	UnloadTexture(board);
 	CloseWindow();
@@ -429,6 +496,7 @@ Board::Board()
 	this->chsbrd = new chess_board();
 	this->gen = new hash_data();
 	this->list = new MoveList();
+	this->repetition_table = new Hash_data_table();
 	init_random_keys(this->gen);
 	Generate_move_tables();
 	New_Game();
@@ -437,6 +505,9 @@ Board::Board()
 Board::~Board()
 {
 	delete this->chsbrd;
+	delete this->gen;
+	delete this->list;
+	delete this->repetition_table;
 }
 
 void Board::New_Game()
@@ -463,7 +534,10 @@ void Board::New_Game()
 	this->chsbrd->castle = wk | wq | bk | bq;
 	this->chsbrd->enpassant = no_sq;
 	this->chsbrd->hash_key = Generate_hash_key(this->gen);
+	this->chsbrd->gameover = 0;
+	this->repetition_table->clear();
 	Generate_moves(this->list, this->chsbrd);
+	
 #ifndef NDEBUG
 	Print_move_list(this->list);
 #endif
@@ -548,16 +622,25 @@ void Board::DoMove(int move)
 	this->chsbrd->incheck[white] = IsKingInCheck(this->chsbrd, white);
 	this->chsbrd->incheck[black] = IsKingInCheck(this->chsbrd, black);
 	Generate_moves(this->list, this->chsbrd);
+	this->repetition_table->push_back(this->chsbrd->hash_key);
+	if (Is_Repetition(this->chsbrd) == 3)
+	{
+		this->chsbrd->gameover = 6;
+	}
+		if (this->chsbrd->fifty >= 100)
+	{
+		this->chsbrd->gameover = 5;
+	}
 	if (this->list->size() == 0)
 	{
 		if (this->chsbrd->incheck[this->chsbrd->side])
 		{
 			// checkmate
-			this->chsbrd->gameover = 1;
+			this->chsbrd->gameover = this->chsbrd->side == white ? 1 : 2;
 		}
 		else
 		{
-			this->chsbrd->gameover = 2;
+			this->chsbrd->gameover = this->chsbrd->side == white ? 3 : 4;
 		}
 	}
 #ifndef NDEBUG
@@ -970,6 +1053,21 @@ bool Board::IsSquareAttacked(int square, int xside, chess_board *brd) // xside =
 	}
 
 	return false;
+}
+
+int Board::Is_Repetition(chess_board *brd)
+{
+	int cnt = 0;
+	U64 *p = repetition_table->data();
+	for (int index = 0; index < repetition_table->size(); ++index)
+	{
+		U64 key = p[index];
+		if (key == brd->hash_key)
+		{
+			++cnt;
+		}
+	}
+    return cnt;
 }
 
 void Board::Generate_moves(MoveList *move_list, chess_board *brd)

@@ -59,6 +59,7 @@ private:
     chess_board *chsbrd;
     hash_data *gen;
     MoveList *list;
+    Hash_data_table *repetition_table;
     int knight_moves[64][8];  // [squares][directions]
     int bishop_moves[64][4];  // [squares][directions]
     int rook_moves[64][4];    // [squares][directions]
@@ -73,6 +74,7 @@ private:
     bool IsEmptySquare(int square, chess_board *brd);
     bool IsOccupiedByOponent(int square, int side, chess_board *brd);
     bool IsSquareAttacked(int square, int xside, chess_board *brd);
+    int Is_Repetition(chess_board *brd);
     void Generate_moves(MoveList *move_list, chess_board *brd);
     void Slider_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, int side, bool &is_capture, MoveList *move_list);
     void Leaper_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, int side, MoveList *move_list);
