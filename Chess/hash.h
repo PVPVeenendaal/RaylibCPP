@@ -3,6 +3,12 @@
 #include <vector>
 #include "bitboard.h"
 
+// ****************************************************
+// Hash
+// Using some C Code from BBC v1.2 by Code Monkey King
+// Translated to C++ and onjects by Peter Veenendaal
+// ****************************************************
+
 typedef struct 
 {
     unsigned int random_state;
@@ -17,3 +23,5 @@ extern unsigned int get_random_U32_number(hash_data *gen);
 extern U64 get_random_U64_number(hash_data *gen);
 
 typedef std::vector<U64> Hash_data_table;
+
+// eof

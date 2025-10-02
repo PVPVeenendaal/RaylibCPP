@@ -3,10 +3,13 @@
 #include <string>
 #include "board.h"
 #include "bitboard.h"
+#include "evaluate.h"
 
 // version
-const std::string version = "0.70";
+const std::string version = "0.72";
+// title
 const std::string title = "Chess in Raylib-C++ (C)2025 Peter Veenendaal; versie: " + version;
+// name of the image pictures
 const std::string pieces[12] = {
 	"PawnW",
 	"KnightW",
@@ -21,7 +24,7 @@ const std::string pieces[12] = {
 	"QueenB",
 	"KingB",
 };
-
+// name of the squares
 std::string square_to_coordinates[] = {
 	"a8",
 	"b8",
@@ -88,14 +91,14 @@ std::string square_to_coordinates[] = {
 	"g1",
 	"h1",
 	"out"};
-
+// gamestate
 enum eGamestate
 {
 	StartGame,
 	PlayGame,
 	StopGame,
 };
-
+// text to print when the game is finished
 const std::string text_game_end[8] = {
 	"",
 	"wit staat schaakmat en verliest",
@@ -104,8 +107,7 @@ const std::string text_game_end[8] = {
 	"zwart staat pat, het is remise",
 	"het is renise door 50 zetten regel",
 	"het is remise door 3 zetten regel",
-	"het is remise door materiaal"
-};
+	"het is remise door materiaal"};
 
 // ------------------------------------------------------------------------------------------------
 // Main
@@ -113,23 +115,28 @@ const std::string text_game_end[8] = {
 
 int main()
 {
+	// draw sizes
 	const int SQUARESIZE = 80;
 	const int BOARDSIZE = 80 * 8;
 	const int SCREENWIDTH = BOARDSIZE + 40;
 	const int SCREENHEIGHT = SQUARESIZE * 9 + 40;
 	const int PIECESIZE = 72;
-	int DRAWBOARD[64];
+
+	int DRAWBOARD[64]; // used for printing the board in the gui
 	Board *brdobj = new Board();
-	int selectpiece = -1;
-	int selectsquare = -1;
-	int promotionmove = 0;
-	U64 canmove = 0ULL;
-	U64 options = 0ULL;
-	bool reversed = false;
-	int gamestate = StartGame;
-	int game_end = 0;
-	// initialize
+	Evaluate *evalobj = new Evaluate();
+	int selectpiece = -1;	   // square from
+	int selectsquare = -1;	   // square to
+	int promotionmove = 0;	   // promotion choice
+	U64 canmove = 0ULL;		   // bitboard all_options [side to move]
+	U64 options = 0ULL;		   // bitboard piece_options[selectpiece]
+	bool reversed = false;	   // play white (false) or black (true)
+	int gamestate = StartGame; // current game state
+	int game_end = 0;		   // > 0 => game is finished
+
+	// initialize raylib
 	InitWindow(SCREENWIDTH, SCREENHEIGHT, title.c_str());
+	// load images and set sizes
 	Texture2D table = LoadTexture("./assets/Table.png");
 	table.width = SCREENWIDTH;
 	table.height = SCREENHEIGHT;
@@ -146,7 +153,8 @@ int main()
 	}
 	Texture2D choice = LoadTexture("./assets/Choice.png");
 	choice.width = PIECESIZE;
-	choice.height = PIECESIZE; 
+	choice.height = PIECESIZE;
+	// set frames per second
 	SetTargetFPS(10);
 
 	// mainloop
@@ -292,14 +300,13 @@ int main()
 			{
 				reversed = false;
 				brdobj->New_Game();
-			
 			}
 			gamestate = PlayGame;
 		}
 		else if (IsKeyPressed(KEY_F6))
 		{
 			reversed = true;
-			brdobj->New_Game();  
+			brdobj->New_Game();
 			gamestate = PlayGame;
 		}
 		// Mouse Press
@@ -348,10 +355,16 @@ int main()
 							brdobj->DoMove(move);
 							selectpiece = -1;
 							selectsquare = -1;
+#ifndef NDEBUG
+							brdobj->Print_board(brdobj->GetChessBoard());
+							int eval = evalobj->Evaluate_board_position(brdobj->Copy_board(brdobj->GetChessBoard()));
+							std::cout << "Evaluation: " << eval << std::endl;
+#endif
 						}
 					}
 				}
-			} else if (psqr > -1)
+			}
+			else if (psqr > -1)
 			{
 				int move = brdobj->GetPromotionMove(selectpiece, selectsquare, promote_pieces[brdobj->GetChessBoard()->side][psqr]);
 				if (move >= 0)
@@ -360,6 +373,11 @@ int main()
 					selectpiece = -1;
 					selectsquare = -1;
 					promotionmove = 0;
+#ifndef NDEBUG
+					brdobj->Print_board(brdobj->GetChessBoard());
+					int eval = evalobj->Evaluate_board_position(brdobj->Copy_board(brdobj->GetChessBoard()));
+					std::cout << "Evaluation: " << eval << std::endl;
+#endif
 				}
 			}
 		}
@@ -368,6 +386,7 @@ int main()
 
 	// clean up
 	delete brdobj;
+	delete evalobj;
 	for (int i = 0; i < 12; ++i)
 	{
 		UnloadTexture(img_pieces[i]);
@@ -387,6 +406,9 @@ int main()
 // BitBoard
 // ------------------------------------------------------------------------------------------------
 
+/// @brief Count the bits set in a bitboard
+/// @param bitboard 64 bits
+/// @return count
 static inline int count_bits(U64 bitboard)
 {
 	int count = 0;
@@ -400,11 +422,31 @@ static inline int count_bits(U64 bitboard)
 	return count;
 }
 
+/// @brief Get de first set bit in a bitboard translated to a square
+/// @param bitboard 64 bits
+/// @return square 0 .. 63
 static inline int get_ls1b_index(U64 bitboard)
 {
 	return (bitboard) ? count_bits((bitboard & -bitboard) - 1) : -1;
 }
 
+/// @brief Print a bitboard
+/// example all white pawns in a starting position
+/*
+  8  0 0 0 0 0 0 0 0
+  7  0 0 0 0 0 0 0 0
+  6  0 0 0 0 0 0 0 0
+  5  0 0 0 0 0 0 0 0
+  4  0 0 0 0 0 0 0 0
+  3  0 0 0 0 0 0 0 0
+  2  1 1 1 1 1 1 1 1
+  1  0 0 0 0 0 0 0 0
+
+	 a b c d e f g h
+
+	 Bitboard: 71776119061217280d
+*/
+/// @param bitboard 64 bits
 void print_bitboard(U64 bitboard)
 {
 	printf("\n");
@@ -433,6 +475,8 @@ void print_bitboard(U64 bitboard)
 // Hash
 // ------------------------------------------------------------------------------------------------
 
+/// @brief Generate random values
+/// @param gen pointer to generated values put in structure
 void init_random_keys(hash_data *gen)
 {
 	gen->random_state = 1804289383;
@@ -459,6 +503,9 @@ void init_random_keys(hash_data *gen)
 	gen->side_key = get_random_U64_number(gen);
 }
 
+/// @brief Generate a 32 bit random value
+/// @param gen pointer to generated values put in structure
+/// @return pseudo random 32 bit value
 unsigned int get_random_U32_number(hash_data *gen)
 {
 	unsigned int number = gen->random_state;
@@ -471,6 +518,9 @@ unsigned int get_random_U32_number(hash_data *gen)
 	return number;
 }
 
+/// @brief Generate a 64 bit random value
+/// @param gen pointer to generated values put in structure
+/// @return pseudo random 64 bit value
 U64 get_random_U64_number(hash_data *gen)
 {
 	U64 n1, n2, n3, n4;
@@ -491,6 +541,7 @@ U64 get_random_U64_number(hash_data *gen)
 // Board
 // ------------------------------------------------------------------------------------------------
 
+/// @brief Constructor
 Board::Board()
 {
 	this->chsbrd = new chess_board();
@@ -502,6 +553,7 @@ Board::Board()
 	New_Game();
 }
 
+/// @brief Destructor
 Board::~Board()
 {
 	delete this->chsbrd;
@@ -510,6 +562,7 @@ Board::~Board()
 	delete this->repetition_table;
 }
 
+/// @brief Start a new game, initialize the structure chess_board
 void Board::New_Game()
 {
 	Reset_board(this->chsbrd);
@@ -537,12 +590,15 @@ void Board::New_Game()
 	this->chsbrd->gameover = 0;
 	this->repetition_table->clear();
 	Generate_moves(this->list, this->chsbrd);
-	
+
 #ifndef NDEBUG
 	Print_move_list(this->list);
 #endif
 }
 
+/// @brief Get a piece on a square used for drawing in the gui
+/// @param square a8..h1 = 0..63
+/// @return piece P..k = 0..11
 int Board::GetPiece(int square)
 {
 	for (int i = P; i <= k; ++i)
@@ -555,11 +611,17 @@ int Board::GetPiece(int square)
 	return -1;
 }
 
+/// @brief Get the property chess_board
+/// @return pointer to chess_board
 chess_board *Board::GetChessBoard()
 {
 	return this->chsbrd;
 }
 
+/// @brief Look in the movelist for a move with te starting coordinate and the ending coordinate used in the gui
+/// @param sqf starting coordinate a8..h1
+/// @param sqt ending coordinate a8..h1
+/// @return move
 int Board::GetMove(int sqf, int sqt)
 {
 	if (this->list->size() == 0)
@@ -585,9 +647,14 @@ int Board::GetMove(int sqf, int sqt)
 	return -1; // not found
 }
 
+/// @brief Look in the movelist for a move with te starting coordinate and the ending coordinate and the promoted piece used in the gui
+/// @param sqf starting coordinate a8..h1
+/// @param sqt ending coordinate a8..h1
+/// @param piece promotion piece N, B, R, Q for white to move and n, b, r, q for black to move
+/// @return move
 int Board::GetPromotionMove(int sqf, int sqt, int piece)
 {
-    if (this->list->size() == 0)
+	if (this->list->size() == 0)
 	{
 		return -1;
 	}
@@ -611,6 +678,8 @@ int Board::GetPromotionMove(int sqf, int sqt, int piece)
 	return -1; // not found
 }
 
+/// @brief Make the found move final in the gui
+/// @param move found move
 void Board::DoMove(int move)
 {
 #ifndef NDEBUG
@@ -627,7 +696,7 @@ void Board::DoMove(int move)
 	{
 		this->chsbrd->gameover = 6;
 	}
-		if (this->chsbrd->fifty >= 100)
+	if (this->chsbrd->fifty >= 100)
 	{
 		this->chsbrd->gameover = 5;
 	}
@@ -648,6 +717,41 @@ void Board::DoMove(int move)
 #endif
 }
 
+/// @brief print the chess board in ascii mode
+void Board::Print_board(chess_board *brd)
+{
+	printf("\n");
+	for (int rank = 0; rank < 8; rank++)
+	{
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			if (!file)
+				printf("  %d ", 8 - rank);
+			int piece = -1;
+
+			for (int bb_piece = P; bb_piece <= k; bb_piece++) // loop over all piece bitboards
+			{
+				if (get_bit(brd->bitboards[bb_piece], square)) // if there is a piece on current square
+				{
+					piece = bb_piece;
+				}
+			}
+			printf(" %c", (piece == -1) ? '.' : ascii_pieces[piece]);
+		}
+		printf("\n");
+	}
+	printf("\n     a b c d e f g h\n\n");
+	printf("     Side:     %s\n", !brd->side ? "white" : "black");
+	printf("     Enpassant:   %s\n", (brd->enpassant != no_sq) ? square_to_coordinates[brd->enpassant].c_str() : "no");
+	printf("     Castling:  %c%c%c%c\n\n", (brd->castle & wk) ? 'K' : '-',
+		   (brd->castle & wq) ? 'Q' : '-',
+		   (brd->castle & bk) ? 'k' : '-',
+		   (brd->castle & bq) ? 'q' : '-');
+	printf("     Hash key:  %llx\n\n", brd->hash_key);
+}
+
+/// @brief Generate the move tables per piece
 void Board::Generate_move_tables()
 {
 	int sqf, sqt, cnt;
@@ -848,6 +952,8 @@ void Board::Generate_move_tables()
 #endif
 }
 
+/// @brief Fill the bitboards for the occupancies white, black or both with the piece bitboards
+/// @param brd pointer to chess_board
 void Board::Set_occupancies(chess_board *brd)
 {
 	memset(brd->occupancies, 0ULL, sizeof(brd->occupancies));
@@ -863,6 +969,8 @@ void Board::Set_occupancies(chess_board *brd)
 	brd->occupancies[both] |= brd->occupancies[black];
 }
 
+/// @brief Initialise the chess_board
+/// @param brd pointer to chess_board
 void Board::Reset_board(chess_board *brd)
 {
 	memset(brd->bitboards, 0ULL, sizeof(brd->bitboards));
@@ -879,26 +987,32 @@ void Board::Reset_board(chess_board *brd)
 	brd->incheck[black] = false;
 }
 
+/// @brief Copy a chess_board into a clone
+/// @param brd pointer to chess_board
+/// @return pointer to the clone
 chess_board *Board::Copy_board(chess_board *brd)
 {
-	chess_board *keep = new chess_board();
+	chess_board *clone = new chess_board();
 
-	memcpy(keep->bitboards, brd->bitboards, sizeof(brd->bitboards));
-	memcpy(keep->occupancies, brd->occupancies, sizeof(brd->occupancies));
-	memcpy(keep->piece_options, brd->piece_options, sizeof(brd->piece_options));
-	memcpy(keep->all_options, brd->all_options, sizeof(brd->all_options));
-	keep->side = brd->side;
-	keep->enpassant = brd->enpassant;
-	keep->castle = brd->castle;
-	keep->fifty = brd->fifty;
-	keep->hash_key = brd->hash_key;
-	keep->ply = brd->ply;
-	keep->incheck[white] = brd->incheck[white];
-	keep->incheck[black] = brd->incheck[black];
+	memcpy(clone->bitboards, brd->bitboards, sizeof(brd->bitboards));
+	memcpy(clone->occupancies, brd->occupancies, sizeof(brd->occupancies));
+	memcpy(clone->piece_options, brd->piece_options, sizeof(brd->piece_options));
+	memcpy(clone->all_options, brd->all_options, sizeof(brd->all_options));
+	clone->side = brd->side;
+	clone->enpassant = brd->enpassant;
+	clone->castle = brd->castle;
+	clone->fifty = brd->fifty;
+	clone->hash_key = brd->hash_key;
+	clone->ply = brd->ply;
+	clone->incheck[white] = brd->incheck[white];
+	clone->incheck[black] = brd->incheck[black];
 
-	return keep;
+	return clone;
 }
 
+/// @brief Generate a 'unique' key for the current state of the chess_board
+/// @param gen pointer to generated values put in structure
+/// @return 64 bit 'unique' key
 U64 Board::Generate_hash_key(hash_data *gen)
 {
 	U64 final_key = 0ULL;
@@ -927,11 +1041,20 @@ U64 Board::Generate_hash_key(hash_data *gen)
 	return final_key;
 }
 
+/// @brief test if a square on the chess_board is an empty one
+/// @param square a8..h1
+/// @param brd pointer to chess_board
+/// @return true/false
 bool Board::IsEmptySquare(int square, chess_board *brd)
 {
 	return get_bit(brd->occupancies[both], square) == 0ULL;
 }
 
+/// @brief test if a square is occupied by the other side
+/// @param square a8..h1
+/// @param side white or black
+/// @param brd pointer to chess_board
+/// @return true/false
 bool Board::IsOccupiedByOponent(int square, int side, chess_board *brd)
 {
 	int xside = side ^ 1;
@@ -939,7 +1062,12 @@ bool Board::IsOccupiedByOponent(int square, int side, chess_board *brd)
 	return get_bit(brd->occupancies[xside], square) > 0ULL;
 }
 
-bool Board::IsSquareAttacked(int square, int xside, chess_board *brd) // xside = attacker
+/// @brief test if a square is attacked by the other side
+/// @param square a8..h1
+/// @param xside the other side = attacker
+/// @param brd pointer to chess_board
+/// @return true/false
+bool Board::IsSquareAttacked(int square, int xside, chess_board *brd)
 {
 	int sqf, attacker;
 	int side = xside ^ 1;
@@ -1055,6 +1183,9 @@ bool Board::IsSquareAttacked(int square, int xside, chess_board *brd) // xside =
 	return false;
 }
 
+/// @brief Count the number of repetitions from the current state off the chess_board
+/// @param brd pointer to chess_baord
+/// @return number
 int Board::Is_Repetition(chess_board *brd)
 {
 	int cnt = 0;
@@ -1067,9 +1198,18 @@ int Board::Is_Repetition(chess_board *brd)
 			++cnt;
 		}
 	}
-    return cnt;
+	return cnt;
 }
 
+/// @brief Generate the moves into a movelist and fill the bitboards for the options
+///        all-options : set the bit from the sqaure from if it is possible to move
+///        piece-options : set the bit from the square to if it is possible to move
+/*     The chess board is presented by bitboards, one for each piece
+	   plus 3 bitboard for occupansies: white, black and both
+	   The moves are get from the move tables [squares][directions]
+*/
+/// @param move_list List of moves
+/// @param brd pointer to chess_board
 void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 {
 	int sqf, sqt, move;
@@ -1093,8 +1233,8 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 			sqf = get_ls1b_index(bitboard);
 			switch (piece)
 			{
-			case P:
-			case p:
+			case P: // white pawn
+			case p: // black pawn
 				// pawn move
 				// regular move
 				sqt = pawn_moves[sqf][brd->side][1];
@@ -1117,7 +1257,7 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 					}
 					if (move > 0)
 					{
-						if (Test_move(brd, move))
+						if (Test_move(brd, move)) // valid move ?
 						{
 							move_list->push_back(move);
 							set_bit(brd->piece_options[sqf], sqt);
@@ -1172,7 +1312,7 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 						}
 						if (move > 0)
 						{
-							if (Test_move(brd, move))
+							if (Test_move(brd, move)) // valid move ?
 							{
 								move_list->push_back(move);
 								set_bit(brd->piece_options[sqf], sqt);
@@ -1191,7 +1331,7 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 						if (sqt == brd->enpassant)
 						{
 							move = encode_move(sqf, sqt, piece, 0, 1, 0, 1, 0);
-							if (Test_move(brd, move))
+							if (Test_move(brd, move)) // valid move ?
 							{
 								move_list->push_back(move);
 								set_bit(brd->piece_options[sqf], sqt);
@@ -1201,8 +1341,8 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 					}
 				}
 				break;
-			case N:
-			case n:
+			case N: // white night
+			case n: // black night
 				// knight move
 				for (int index = 0; index < 8; ++index)
 				{
@@ -1213,8 +1353,8 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 					}
 				}
 				break;
-			case B:
-			case b:
+			case B: // white bishop
+			case b: // black bishop
 				// bishop move
 				for (int index = 0; index < 4; ++index)
 				{
@@ -1238,8 +1378,8 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 					}
 				}
 				break;
-			case R:
-			case r:
+			case R: // white rook
+			case r: // black rook
 				// rook move
 				for (int index = 0; index < 4; ++index)
 				{
@@ -1263,8 +1403,8 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 					}
 				}
 				break;
-			case Q:
-			case q:
+			case Q: // white queen
+			case q: // black queen
 				// queen move
 				for (int index = 0; index < 8; ++index)
 				{
@@ -1288,8 +1428,8 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 					}
 				}
 				break;
-			case K:
-			case k:
+			case K: // white king
+			case k: // black king
 				// king move
 				for (int index = 0; index < 8; ++index)
 				{
@@ -1369,6 +1509,14 @@ void Board::Generate_moves(MoveList *move_list, chess_board *brd)
 	}
 }
 
+/// @brief find next move of a slider piece => bishop, rook or queen
+/// @param sqt square to
+/// @param brd pointer to chess_board
+/// @param sqf square from
+/// @param piece piece to move
+/// @param side color to move
+/// @param is_capture flag that indicates that the next move ended by capture or own piece
+/// @param move_list pointer to the movelist
 void Board::Slider_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, int side, bool &is_capture, MoveList *move_list)
 {
 	int move = 0;
@@ -1384,7 +1532,7 @@ void Board::Slider_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, 
 	}
 	if (move > 0)
 	{
-		if (Test_move(brd, move))
+		if (Test_move(brd, move)) // valid move ?
 		{
 			move_list->push_back(move);
 			set_bit(brd->piece_options[sqf], sqt);
@@ -1397,6 +1545,13 @@ void Board::Slider_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, 
 	}
 }
 
+/// @brief find move of a leaper piece => knight or king
+/// @param sqt square to
+/// @param brd pointer to chess_board
+/// @param sqf square from
+/// @param piece piece to move
+/// @param side side to move
+/// @param move_list pointer to the movelist
 void Board::Leaper_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, int side, MoveList *move_list)
 {
 	int move = 0;
@@ -1410,7 +1565,7 @@ void Board::Leaper_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, 
 	}
 	if (move > 0)
 	{
-		if (Test_move(brd, move))
+		if (Test_move(brd, move)) // valid move ?
 		{
 			move_list->push_back(move);
 			set_bit(brd->piece_options[sqf], sqt);
@@ -1419,16 +1574,23 @@ void Board::Leaper_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, 
 	}
 }
 
+/// @brief Test if the move is valid
+/// @param brd pointer to chess_board
+/// @param move move to test
+/// @return true/false
 bool Board::Test_move(chess_board *brd, int move)
 {
 	chess_board *testbrd = Copy_board(brd);
-	Makemove(move, testbrd);
+	Makemove(move, testbrd); // side is switched
 	testbrd->side ^= 1;
 	bool incheck = IsKingInCheck(testbrd, testbrd->side);
 	delete testbrd;
 	return !incheck;
 }
 
+/// @brief Make a move, update from the bitboards and update from the hash_key
+/// @param move move to make
+/// @param brd pointer to chess_board
 void Board::Makemove(int move, chess_board *brd)
 {
 	int sqf = get_move_source(move);
@@ -1578,6 +1740,10 @@ void Board::Makemove(int move, chess_board *brd)
 	brd->side ^= 1;
 }
 
+/// @brief Test if the king from a side is in check
+/// @param brd pointer to chess_baord
+/// @param side side to move
+/// @return true/false
 bool Board::IsKingInCheck(chess_board *brd, int side)
 {
 	int xside = side ^ 1;
@@ -1586,6 +1752,8 @@ bool Board::IsKingInCheck(chess_board *brd, int side)
 	return brd->incheck[side];
 }
 
+/// @brief Print the movelist
+/// @param move_list list of available moves
 void Board::Print_move_list(MoveList *move_list)
 {
 	// do nothing on empty move list
@@ -1620,6 +1788,8 @@ void Board::Print_move_list(MoveList *move_list)
 	printf("\n\n     Total number of moves: %zu\n\n", move_list->size());
 }
 
+/// @brief Print a move
+/// @param move move to print
 void Board::Print_move(int move)
 {
 	if (get_move_promoted(move))
@@ -1637,4 +1807,341 @@ void Board::Print_move(int move)
 
 // ------------------------------------------------------------------------------------------------
 // End Board
+// ------------------------------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------------------------------
+// Evaluate
+// ------------------------------------------------------------------------------------------------
+
+/// @brief Constructor
+Evaluate::Evaluate()
+{
+	Init_evaluation_masks();
+}
+
+/// @brief evaluate current positon
+/*
+	Now in order to calculate interpolated score
+	for a given game phase we use this formula
+	(same for material and positional scores):
+	(
+		score_opening * game_phase_score +
+		score_endgame * (opening_phase_score - game_phase_score)
+	) / opening_phase_score
+
+	E.g. the score for pawn on d4 at phase say 5000 would be
+	interpolated_score = (12 * 5000 + (-7) * (6192 - 5000)) / 6192 = 8,342377261
+*/
+/// @param clone copy of the chessboard
+/// @return value
+int Evaluate::Evaluate_board_position(chess_board *clone)
+{
+	int game_phase_score = Get_game_phase_score(clone);	 // get game phase score
+	int game_phase = -1;								 // game phase (opening, middle game, endgame)
+	int score = 0, score_opening = 0, score_endgame = 0; // static evaluation score
+	U64 bitboard;										 // current pieces bitboard copy
+	int piece, square;									 // init piece & square
+	int double_pawns = 0;								 // penalties
+
+	if (game_phase_score > opening_phase_score) // pick up game phase based on game phase score
+	{
+		game_phase = opening;
+	}
+	else if (game_phase_score < endgame_phase_score)
+	{
+		game_phase = endgame;
+	}
+	else
+	{
+		game_phase = middlegame;
+	}
+	for (int bb_piece = P; bb_piece <= k; bb_piece++) // loop over piece bitboards
+	{
+		bitboard = clone->bitboards[bb_piece]; // init piece bitboard copy
+		while (bitboard)					   // loop over pieces within a bitboard
+		{
+			piece = bb_piece;				   // init piece
+			square = get_ls1b_index(bitboard); // init square
+			score_opening += material_score[opening][piece];
+			score_endgame += material_score[endgame][piece];
+			switch (piece) // score positional piece scores
+			{
+			case P: // evaluate white pawns
+				score_opening += positional_score[opening][pawn][square];
+				score_endgame += positional_score[endgame][pawn][square];
+				double_pawns = count_bits(clone->bitboards[P] & file_masks[square]);
+				if (double_pawns > 1)
+				{
+					score_opening += (double_pawns - 1) * double_pawn_penalty_opening;
+					score_endgame += (double_pawns - 1) * double_pawn_penalty_endgame;
+				}
+				if ((clone->bitboards[P] & isolated_masks[square]) == 0)
+				{
+					score_opening += isolated_pawn_penalty_opening;
+					score_endgame += isolated_pawn_penalty_endgame;
+				}
+				if ((white_passed_masks[square] & clone->bitboards[p]) == 0)
+				{
+					score_opening += passed_pawn_bonus[get_rank[square]];
+					score_endgame += passed_pawn_bonus[get_rank[square]];
+				}
+				break;
+			case N: // evaluate white knights
+				score_opening += positional_score[opening][knight][square];
+				score_endgame += positional_score[endgame][knight][square];
+				break;
+			case B: // evaluate white bishops
+				score_opening += positional_score[opening][bishop][square];
+				score_endgame += positional_score[endgame][bishop][square];
+				score_opening += (count_bits(clone->piece_options[square]) - bishop_unit) * bishop_mobility_opening; // mobility
+				score_endgame += (count_bits(clone->piece_options[square]) - bishop_unit) * bishop_mobility_endgame; // mobility
+				break;
+			case R: // evaluate white rooks
+				score_opening += positional_score[opening][rook][square];
+				score_endgame += positional_score[endgame][rook][square];
+				if ((clone->bitboards[P] & file_masks[square]) == 0) // semi open file
+				{
+					score_opening += semi_open_file_score;
+					score_endgame += semi_open_file_score;
+				}
+				if (((clone->bitboards[P] | clone->bitboards[p]) & file_masks[square]) == 0) // open file
+				{
+					score_opening += open_file_score;
+					score_endgame += open_file_score;
+				}
+				break;
+			case Q: // evaluate white queens
+				score_opening += positional_score[opening][queen][square];
+				score_endgame += positional_score[endgame][queen][square];
+				score_opening += (count_bits(clone->piece_options[square]) - queen_unit) * queen_mobility_opening; // mobility
+				score_endgame += (count_bits(clone->piece_options[square]) - queen_unit) * queen_mobility_endgame; // mobility
+				break;
+			case K: // evaluate white king
+				score_opening += positional_score[opening][king][square];
+				score_endgame += positional_score[endgame][king][square];
+				if ((clone->bitboards[P] & file_masks[square]) == 0) // semi open file
+				{
+					score_opening -= semi_open_file_score;
+					score_endgame -= semi_open_file_score;
+				}
+				if (((clone->bitboards[P] | clone->bitboards[p]) & file_masks[square]) == 0) // open file
+				{
+					score_opening -= open_file_score;
+					score_endgame -= open_file_score;
+				}
+				score_opening += count_bits(clone->piece_options[square] & clone->occupancies[white]) * king_shield_bonus; // king safety bonus
+				score_endgame += count_bits(clone->piece_options[square] & clone->occupancies[white]) * king_shield_bonus; // king safety bonus
+				break;
+			case p: // evaluate black pawns
+				score_opening -= positional_score[opening][pawn][mirror(square)];
+				score_endgame -= positional_score[endgame][pawn][mirror(square)];
+				double_pawns = count_bits(clone->bitboards[p] & file_masks[square]);
+				if (double_pawns > 1)
+				{
+					score_opening -= (double_pawns - 1) * double_pawn_penalty_opening;
+					score_endgame -= (double_pawns - 1) * double_pawn_penalty_endgame;
+				}
+				if ((clone->bitboards[p] & isolated_masks[square]) == 0)
+				{
+					score_opening -= isolated_pawn_penalty_opening;
+					score_endgame -= isolated_pawn_penalty_endgame;
+				}
+				if ((black_passed_masks[square] & clone->bitboards[P]) == 0)
+				{
+					score_opening -= passed_pawn_bonus[get_rank[square]];
+					score_endgame -= passed_pawn_bonus[get_rank[square]];
+				}
+				break;
+			case n: // evaluate black knights
+				score_opening -= positional_score[opening][knight][mirror(square)];
+				score_endgame -= positional_score[endgame][knight][mirror(square)];
+				break;
+			case b: // evaluate black bishops
+				score_opening -= positional_score[opening][bishop][mirror(square)];
+				score_endgame -= positional_score[endgame][bishop][mirror(square)];
+				score_opening -= (count_bits(clone->piece_options[square]) - bishop_unit) * bishop_mobility_opening; // mobility
+				score_endgame -= (count_bits(clone->piece_options[square]) - bishop_unit) * bishop_mobility_endgame; // mobility
+				break;
+			case r: // evaluate black rooks
+				score_opening -= positional_score[opening][rook][mirror(square)];
+				score_endgame -= positional_score[endgame][rook][mirror(square)];
+				if ((clone->bitboards[p] & file_masks[square]) == 0) // semi open file
+				{
+					score_opening -= semi_open_file_score;
+					score_endgame -= semi_open_file_score;
+				}
+				if (((clone->bitboards[P] | clone->bitboards[p]) & file_masks[square]) == 0) // open file
+				{
+					score_opening -= open_file_score;
+					score_endgame -= open_file_score;
+				}
+				break;
+			case q: // evaluate black queens
+				score_opening -= positional_score[opening][queen][mirror(square)];
+				score_endgame -= positional_score[endgame][queen][mirror(square)];
+				score_opening -= (count_bits(clone->piece_options[square]) - queen_unit) * queen_mobility_opening; // mobility
+				score_endgame -= (count_bits(clone->piece_options[square]) - queen_unit) * queen_mobility_endgame; // mobility
+				break;
+			// evaluate black king
+			case k: // get opening/endgame positional score
+				score_opening -= positional_score[opening][king][mirror(square)];
+				score_endgame -= positional_score[endgame][king][mirror(square)];
+				if ((clone->bitboards[p] & file_masks[square]) == 0) // semi open file
+				{
+					score_opening += semi_open_file_score;
+					score_endgame += semi_open_file_score;
+				}
+				if (((clone->bitboards[P] | clone->bitboards[p]) & file_masks[square]) == 0) // open file
+				{
+					score_opening += open_file_score;
+					score_endgame += open_file_score;
+				}
+				score_opening -= count_bits(clone->piece_options[square] & clone->occupancies[black]) * king_shield_bonus; // king safety bonus
+				score_endgame -= count_bits(clone->piece_options[square] & clone->occupancies[black]) * king_shield_bonus; // king safety bonus
+				break;
+			}
+			pop_bit(bitboard, square); // reset the bit on square
+		}
+	}
+	if (game_phase == middlegame) // interpolate score in the middlegame
+	{
+		score = (score_opening * game_phase_score +
+				 score_endgame * (opening_phase_score - game_phase_score)) /
+				opening_phase_score;
+	}
+	else if (game_phase == opening) // pure opening score in opening
+	{
+		score = score_opening;
+	}
+	else if (game_phase == endgame) // return pure endgame score in endgame
+	{
+		score = score_endgame;
+	}
+	return (clone->side == white) ? score : -score; // return final evaluation based on side
+}
+
+/// @brief File the file bitboard or the rank bitboard
+/// @param file_number a8..h1
+/// @param rank_number a8..h1
+/// @return bitboard
+U64 Evaluate::Set_file_rank_mask(int file_number, int rank_number)
+{
+	U64 mask = 0ULL; // file or rank mask
+
+	for (int rank = 0; rank < 8; rank++)
+	{
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			if (file_number != -1)
+			{
+				if (file == file_number) // on file match
+				{
+					set_bit(mask, square);
+				}
+			}
+			else if (rank_number != -1)
+			{
+				if (rank == rank_number) // on rank match
+				{
+					set_bit(mask, square);
+				}
+			}
+		}
+	}
+	return mask;
+}
+
+/// @brief Fill the mask bitboards
+void Evaluate::Init_evaluation_masks()
+{
+	// Init file masks
+	for (int rank = 0; rank < 8; rank++)
+	{
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			file_masks[square] |= Set_file_rank_mask(file, -1); // init file mask for a current square
+		}
+	}
+	// Init rank masks
+	for (int rank = 0; rank < 8; rank++)
+	{
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			rank_masks[square] |= Set_file_rank_mask(-1, rank); // init rank mask for a current square
+		}
+	}
+	// Init isolated masks
+	for (int rank = 0; rank < 8; rank++)
+	{
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			isolated_masks[square] |= Set_file_rank_mask(file - 1, -1); // init isolated pawns masks for a current square
+			isolated_masks[square] |= Set_file_rank_mask(file + 1, -1); // init isolated pawns masks for a current square
+		}
+	}
+	// White passed masks
+	for (int rank = 0; rank < 8; rank++)
+	{
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			white_passed_masks[square] |= Set_file_rank_mask(file - 1, -1); // init white passed pawns mask for a current square
+			white_passed_masks[square] |= Set_file_rank_mask(file, -1);		// init white passed pawns mask for a current square
+			white_passed_masks[square] |= Set_file_rank_mask(file + 1, -1); // init white passed pawns mask for a current square
+			for (int i = 0; i < (8 - rank); i++)							// loop over redudant ranks
+			{
+				white_passed_masks[square] &= ~rank_masks[(7 - i) * 8 + file]; // reset redudant bits
+			}
+		}
+	}
+	// Black passed masks
+	for (int rank = 0; rank < 8; rank++)
+	{
+		for (int file = 0; file < 8; file++)
+		{
+			int square = rank * 8 + file;
+			black_passed_masks[square] |= Set_file_rank_mask(file - 1, -1); // init black passed pawns mask for a current square
+			black_passed_masks[square] |= Set_file_rank_mask(file, -1);		// init black passed pawns mask for a current square
+			black_passed_masks[square] |= Set_file_rank_mask(file + 1, -1); // init black passed pawns mask for a current square
+			for (int i = 0; i < rank + 1; i++)								// loop over redudant ranks
+			{
+				black_passed_masks[square] &= ~rank_masks[i * 8 + file]; // reset redudant bits
+			}
+		}
+	}
+}
+
+/// @brief
+/*
+		The game phase score of the game is derived from the pieces
+		(not counting pawns and kings) that are still on the board.
+		The full material starting position game phase score is:
+
+		4 * knight material score in the opening +
+		4 * bishop material score in the opening +
+		4 * rook material score in the opening +
+		2 * queen material score in the opening
+*/
+/// @return score
+/// @param brd pointer to the chess_board
+int Evaluate::Get_game_phase_score(chess_board *brd)
+{
+	int white_piece_scores = 0, black_piece_scores = 0; // white & black game phase scores
+	for (int piece = N; piece <= Q; ++piece)			// loop over white pieces
+	{
+		white_piece_scores += count_bits(brd->bitboards[piece]) * material_score[opening][piece];
+	}
+	for (int piece = n; piece <= q; piece++) // loop over black pieces
+	{
+		black_piece_scores += count_bits(brd->bitboards[piece]) * -material_score[opening][piece];
+	}
+	return white_piece_scores + black_piece_scores; // return game phase score
+}
+
+// ------------------------------------------------------------------------------------------------
+// Evaluate
 // ------------------------------------------------------------------------------------------------
