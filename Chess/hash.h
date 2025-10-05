@@ -4,9 +4,9 @@
 #include "bitboard.h"
 
 // ****************************************************
-// Hash
-// Using some C Code from BBC v1.2 by Code Monkey King
-// Translated to C++ and onjects by Peter Veenendaal
+// Hash                                               * 
+// Using C Code from BBC by Code Monkey King          *
+// Translated to C++ and objects by Peter Veenendaal  *
 // ****************************************************
 
 typedef struct 

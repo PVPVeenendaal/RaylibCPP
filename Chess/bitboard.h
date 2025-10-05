@@ -4,9 +4,9 @@
 #include <vector>
 
 // ****************************************************
-// Bitboard
-// Using some C Code from BBC v1.2 by Code Monkey King
-// Translated to C++ and objects by Peter Veenendaal
+// Bitboard                                           *
+// Using C Code from BBC by Code Monkey King          *
+// Translated to C++ and objects by Peter Veenendaal  *
 // ****************************************************
 
 typedef unsigned long long U64;

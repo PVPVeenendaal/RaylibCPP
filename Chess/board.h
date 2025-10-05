@@ -6,9 +6,9 @@
 #include "move.h"
 
 // ****************************************************
-// Board
-// Using some C Code from BBC v1.2 by Code Monkey King
-// Translated to C++ and onjects by Peter Veenendaal
+// Board                                              *
+// Using C Code from BBC by Code Monkey King          *
+// Translated to C++ and objects by Peter Veenendaal  *
 // ****************************************************
 
 // macro's
@@ -56,21 +56,28 @@ typedef struct
 class Board
 {
 public:
-    Board();                                           // constructor
-    ~Board();                                          // destructor
-    void New_Game();                                   // begin a new game
-    int GetPiece(int square);                          // use in the gui
-    chess_board *GetChessBoard();                      // get pointer to the structure
-    chess_board *Copy_board(chess_board *brd);         // hard copy of the structure chess_board
-    int GetMove(int sqf, int sqt);                     // use in the gui
-    int GetPromotionMove(int sqf, int sqt, int piece); // use in the gui
-    void DoMove(int move);                             // use in the gui
-    void Print_board(chess_board *brd);                // debug only
+    Board();                                                            // constructor
+    ~Board();                                                           // destructor
+    void New_Game();                                                    // begin a new game
+    int GetPiece(int square);                                           // use in the gui
+    chess_board *GetChessBoard();                                       // getter from the structure chess_board
+    chess_board *Copy_board();                                          // keep the state of the structure chess_board
+    void Take_back(chess_board *keep);                                  // set the state back of the current chess_board
+    int GetMove(int sqf, int sqt);                                      // use in the gui
+    int GetPromotionMove(int sqf, int sqt, int piece);                  // use in the gui
+    void DoMove(int move);                                              // use in the gui
+    void Print_board();                                                 // debug only
+    void Generate_moves(MoveList *move_list, bool include);             // Generate the possible moves using bitboards for the pieces and the Move tables for the moves
+    bool Makemove(int move, int make_move_flag);                        // Make a move to create a new position
+    Hash_data_table *Get_repetiton_table() { return repetition_table; } // getter from repetition table
+    int Is_Repetition();                                                // Check if the current position is a repetition => 3
+    bool IsKingInCheck(int side);                                       // Check if the king form the side to move is in check
+
 private:
-    chess_board *chsbrd;               // pointer to the structure chess_board
-    hash_data *gen;                    // pointer to the structure hash_data
-    MoveList *list;                    // pointer to the vector<int>
-    Hash_data_table *repetition_table; // pointer to the vector<U64>
+    chess_board *brd = nullptr;                  // pointer to the structure chess_board
+    hash_data *gen = nullptr;                    // pointer to the structure hash_data
+    MoveList *list = nullptr;                    // pointer to the vector<int>
+    Hash_data_table *repetition_table = nullptr; // pointer to the vector<U64>
     // Move tables
     int knight_moves[64][8];  // [squares][directions]
     int bishop_moves[64][4];  // [squares][directions]
@@ -78,22 +85,16 @@ private:
     int pawn_moves[64][2][3]; // [squares][sides][directions]
 
     // methods
-    void Generate_move_tables();                                                                                               // Fill the move tables
-    void Set_occupancies(chess_board *brd);                                                                                    // Fill the occupansies
-    void Reset_board(chess_board *brd);                                                                                        // Initialize the structure chess_board
-    U64 Generate_hash_key(hash_data *gen);                                                                                     // Create a hashvalue form the current position
-    bool IsEmptySquare(int square, chess_board *brd);                                                                          // Check if the square is empty for the current position
-    bool IsOccupiedByOponent(int square, int side, chess_board *brd);                                                          // Check if the square is occupied by the other side
-    bool IsSquareAttacked(int square, int xside, chess_board *brd);                                                            // Check if the sqaure is attacked by the other side
-    int Is_Repetition(chess_board *brd);                                                                                       // Check if the current position is a repetition => 3
-    void Generate_moves(MoveList *move_list, chess_board *brd);                                                                // Generate the possible moves using bitboards for the pieces and the Move tables
-    void Slider_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, int side, bool &is_capture, MoveList *move_list); // test if a slider piece move is found (B, R, Q, b, r, q)
-    void Leaper_piece_move(int &sqt, chess_board *brd, int &sqf, int &piece, int side, MoveList *move_list);                   // test if a leaper piece move is found (N, K, n, k)
-    bool Test_move(chess_board *brd, int move);                                                                                // Test if the move is valid
-    void Makemove(int move, chess_board *brd);                                                                                 // Make a move to create a new position
-    bool IsKingInCheck(chess_board *brd, int side);                                                                            // Check if the king form the side to move is in check
-    void Print_move(int move);                                                                                                 // debug only
-    void Print_move_list(MoveList *move_list);                                                                                 // debug only
+    void Generate_move_tables();                                                                                           // Fill the move tables
+    void Set_occupancies();                                                                                                // Fill the occupansies
+    void Reset_board();                                                                                                    // Initialize the structure chess_board
+    U64 Generate_hash_key();                                                                                               // Create a hashvalue form the current position
+    bool IsEmptySquare(int square);                                                                                        // Check if the square is empty for the current position
+    bool IsOccupiedByOponent(int square, int side);                                                                        // Check if the square is occupied by the other side
+    bool IsSquareAttacked(int square, int xside);                                                                          // Check if the sqaure is attacked by the other side
+    void Slider_piece_move(bool include, int &sqt, int &sqf, int &piece, int side, bool &is_capture, MoveList *move_list); // test if a slider piece move is found (B, R, Q, b, r, q)
+    void Leaper_piece_move(bool include, int &sqt, int &sqf, int &piece, int side, MoveList *move_list);                   // test if a leaper piece move is found (N, K, n, k)
+    bool Test_move(int move);                                                                                              // Test if the move is valid
 };
 
 // eof

@@ -4,9 +4,9 @@
 #include "board.h"
 
 // ****************************************************
-// Evaluate
-// Using some C Code from BBC v1.2 by Code Monkey King
-// Translated to C++ and onjects by Peter Veenendaal
+// Evaluate                                           *
+// Using C Code from BBC by Code Monkey King          *
+// Translated to C++ and objects by Peter Veenendaal  *
 // ****************************************************
 
 // material score [game phase][piece]
@@ -203,7 +203,7 @@ class Evaluate
 {
 public:
     Evaluate();
-    int Evaluate_board_position(chess_board *clone);
+    int Evaluate_board_position(chess_board *brd);
 
 private:
     U64 file_masks[64];         // file masks [square]

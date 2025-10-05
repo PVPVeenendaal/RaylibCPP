@@ -3,9 +3,9 @@
 #include <vector>
 
 // ****************************************************
-// Move
-// Using some C Code from BBC v1.2 by Code Monkey King
-// Translated to C++ and onjects by Peter Veenendaal
+// Move                                               *
+// Using C Code from BBC by Code Monkey King          *
+// Translated to C++ and objects by Peter Veenendaal  *
 // ****************************************************
 
 /*
@@ -57,5 +57,14 @@
 #define get_move_castling(move) (move & 0x800000)
 
 typedef std::vector<int> MoveList;
+
+extern void Print_move(int move);                 // debug only
+extern void Print_move_list(MoveList *move_list); // debug only
+
+enum eMakeMove
+{
+    all_moves,
+    only_captures
+};
 
 // eof
