@@ -13,8 +13,6 @@ Hierbij zijn ook de build regels opgenomen om deze te gebruiken onder Windows.
 - Canasta (een kaartspel tussen speler en computer, 2 tegenstanders en 1 medestander) => release klaar
 - BackGammon (een dobbelsteenspel tussen speler en computer) => release klaar
 - Draughts (een damspel tussen speler en comuter) => release klaar
-- ChessPassThrough (een doorgeef schaakspel tussen speler en computer, 2 tegenstanders en 1 medestander) => nog in bewerking  
-- Chess (een schaakspel om mijn eigen zetgenerator te testen) => nog in bewerking
 
 N.B. 
 - Van de projecten die release klaar zijn is een zip file toegevoegd voor Windows, 
