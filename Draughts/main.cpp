@@ -7,7 +7,7 @@
 #include "move.h"
 
 // version
-const std::string version = "0.80";
+const std::string version = "1.00";
 
 // draw
 const int SQUARESIZE = 72;
@@ -16,6 +16,8 @@ const int SCREENWIDTH = 1600;
 const int SCREENHEIGHT = 72 * 12;
 const float RADIUS = 30.0;
 const float INNERRADIUS = 20.0;
+const int BOARDCOL = HALFSQUARESIZE;
+const int BOARDROW = HALFSQUARESIZE;
 
 static Move bestmove;
 static int bestval;
@@ -115,6 +117,9 @@ int main()
 	// mainloop
 	while (!WindowShouldClose())
 	{
+		// update
+		if (board.GetCount(SWHITE) == 0 || board.GetCount(SBLACK) == 0 || ml.size() == 0)
+			board.SetGameState(true);
 		++guiteller;
 		// draw
 		BeginDrawing();
@@ -211,14 +216,14 @@ int main()
 		{
 			// Draw Board
 			DrawRectangle(
-				HALFSQUARESIZE,
-				HALFSQUARESIZE,
+				BOARDCOL,
+				BOARDROW,
 				SQUARESIZE * 11,
 				SQUARESIZE * 11,
 				DARKGRAY);
 			DrawRectangle(
-				SQUARESIZE,
-				SQUARESIZE,
+				BOARDCOL + HALFSQUARESIZE,
+				BOARDROW + HALFSQUARESIZE,
 				SQUARESIZE * 10,
 				SQUARESIZE * 10,
 				LIGHTGRAY);
@@ -226,16 +231,16 @@ int main()
 			int cntP = board.GetCount(playercolor[DPLAYER]);
 			DrawText(
 				std::to_string(cntA).c_str(),
-				SQUARESIZE,
-				HALFSQUARESIZE + 10,
+				BOARDCOL + HALFSQUARESIZE,
+				BOARDROW - HALFSQUARESIZE + 10,
 				20,
-				RAYWHITE);
+				BLACK);
 			DrawText(
 				std::to_string(cntP).c_str(),
-				SQUARESIZE,
-				SQUARESIZE * 11 + 10,
+				BOARDCOL + HALFSQUARESIZE,
+				BOARDROW + SQUARESIZE * 10 + SQUARESIZE + 10,
 				20,
-				RAYWHITE);
+				BLACK);
 			Move m = Move();
 			if (ml.size() > 0)
 			{
@@ -257,34 +262,34 @@ int main()
 						bool white_king = playercolor[DPLAYER] == SWHITE ? board.GetPiece(BOARDNUMBER[y][x]) == KING_WHITE : board.GetPiece(ROTATEDBOARDNUMBER[y][x]) == KING_WHITE;
 						bool black_king = playercolor[DPLAYER] == SWHITE ? board.GetPiece(BOARDNUMBER[y][x]) == KING_BLACK : board.GetPiece(ROTATEDBOARDNUMBER[y][x]) == KING_BLACK;
 						DrawRectangle(
-							x * SQUARESIZE + SQUARESIZE,
-							y * SQUARESIZE + SQUARESIZE,
+							BOARDCOL + x * SQUARESIZE + HALFSQUARESIZE,
+							BOARDROW + y * SQUARESIZE + HALFSQUARESIZE,
 							SQUARESIZE,
 							SQUARESIZE,
 							GRAY);
 						if (white_pawn || white_king)
 						{
 							DrawCircle(
-								x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
-								y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
+								BOARDCOL + x * SQUARESIZE + SQUARESIZE,
+								BOARDROW + y * SQUARESIZE + SQUARESIZE,
 								RADIUS,
 								RAYWHITE);
 							DrawCircleLines(
-								x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
-								y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
+								BOARDCOL + x * SQUARESIZE + SQUARESIZE,
+								BOARDROW + y * SQUARESIZE + SQUARESIZE,
 								RADIUS,
 								BLACK);
 							DrawCircleLines(
-								x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
-								y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
+								BOARDCOL + x * SQUARESIZE + SQUARESIZE,
+								BOARDROW + y * SQUARESIZE + SQUARESIZE,
 								INNERRADIUS,
 								BLACK);
 							if (white_king)
 							{
 								DrawText(
 									"D",
-									x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE - 6,
-									y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE - 8,
+									BOARDCOL + x * SQUARESIZE + SQUARESIZE - 6,
+									BOARDROW + y * SQUARESIZE + SQUARESIZE - 8,
 									20,
 									BLACK);
 							}
@@ -292,26 +297,26 @@ int main()
 						if (black_pawn || black_king)
 						{
 							DrawCircle(
-								x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
-								y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
+								BOARDCOL + x * SQUARESIZE + SQUARESIZE,
+								BOARDROW + y * SQUARESIZE + SQUARESIZE,
 								RADIUS,
 								BLACK);
 							DrawCircleLines(
-								x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
-								y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
+								BOARDCOL + x * SQUARESIZE + SQUARESIZE,
+								BOARDROW + y * SQUARESIZE + SQUARESIZE,
 								RADIUS,
 								RAYWHITE);
 							DrawCircleLines(
-								x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
-								y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE,
+								BOARDCOL + x * SQUARESIZE + SQUARESIZE,
+								BOARDROW + y * SQUARESIZE + SQUARESIZE,
 								INNERRADIUS,
 								RAYWHITE);
 							if (black_king)
 							{
 								DrawText(
 									"D",
-									x * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE - 6,
-									y * SQUARESIZE + SQUARESIZE + HALFSQUARESIZE - 8,
+									BOARDCOL + x * SQUARESIZE + SQUARESIZE - 6,
+									BOARDROW + y * SQUARESIZE + SQUARESIZE - 8,
 									20,
 									RAYWHITE);
 							}
@@ -327,24 +332,13 @@ int main()
 							 bn == m.GetPosition(SQT)) &&
 							board.GetSide() == playercolor[DPLAYER])
 						{
-							DrawRectangleLines(
-								x * SQUARESIZE + SQUARESIZE,
-								y * SQUARESIZE + SQUARESIZE,
-								SQUARESIZE,
-								SQUARESIZE,
-								col);
-							DrawRectangleLines(
-								x * SQUARESIZE + SQUARESIZE + 1,
-								y * SQUARESIZE + SQUARESIZE + 1,
-								SQUARESIZE - 2,
-								SQUARESIZE - 2,
-								col);
-							DrawRectangleLines(
-								x * SQUARESIZE + SQUARESIZE + 2,
-								y * SQUARESIZE + SQUARESIZE + 2,
-								SQUARESIZE - 4,
-								SQUARESIZE - 4,
-								col);
+							for (int d = 0; d < 3; ++d)
+								DrawRectangleLines(
+									BOARDCOL + x * SQUARESIZE + HALFSQUARESIZE + d,
+									BOARDROW + y * SQUARESIZE + HALFSQUARESIZE + d,
+									SQUARESIZE - d * 2,
+									SQUARESIZE - d * 2,
+									col);
 						}
 
 						if (m.GetSize() > 0 && board.GetSide() == playercolor[DPLAYER])
@@ -353,24 +347,13 @@ int main()
 							{
 								if (bn == m.GetPosition(SQT + i))
 								{
-									DrawRectangleLines(
-										x * SQUARESIZE + SQUARESIZE,
-										y * SQUARESIZE + SQUARESIZE,
-										SQUARESIZE,
-										SQUARESIZE,
-										RED);
-									DrawRectangleLines(
-										x * SQUARESIZE + SQUARESIZE + 1,
-										y * SQUARESIZE + SQUARESIZE + 1,
-										SQUARESIZE - 2,
-										SQUARESIZE - 2,
-										RED);
-									DrawRectangleLines(
-										x * SQUARESIZE + SQUARESIZE + 2,
-										y * SQUARESIZE + SQUARESIZE + 2,
-										SQUARESIZE - 4,
-										SQUARESIZE - 4,
-										RED);
+									for (int d = 0; d < 3; ++d)
+										DrawRectangleLines(
+											BOARDCOL + x * SQUARESIZE + HALFSQUARESIZE + d,
+											BOARDROW + y * SQUARESIZE + HALFSQUARESIZE + d,
+											SQUARESIZE - d * 2,
+											SQUARESIZE - d * 2,
+											RED);
 								}
 							}
 						}
@@ -516,41 +499,28 @@ int main()
 
 			if (board.GetGameState())
 			{
-				std::string winnaar = board.GetSide() == SWHITE ? "Zwart wint" : "Wit wint";
+				std::string winnaar = board.GetSide() == SWHITE ? "Zwart wint, F5 = nieuw spel" : "Wit wint, F5 = nieuw spel";
 				DrawText(
 					winnaar.c_str(),
-					SQUARESIZE * 12,
-					HALFSQUARESIZE + SQUARESIZE * 10,
-					20,
-					DARKGREEN);
-				DrawText(
-					"Druk op F5 voor een nieuw spel",
-					SQUARESIZE * 12,
-					HALFSQUARESIZE + SQUARESIZE * 10 + 20,
+					BOARDCOL + SQUARESIZE,
+					10,
 					20,
 					DARKGREEN);
 			}
-#ifndef NDEBUG
 			std::string evalstr = std::to_string(bestval);
+			std::string text = "waarde:" + evalstr;
 			DrawText(
-				evalstr.c_str(),
-				HALFSQUARESIZE,
-				HALFSQUARESIZE + 11 * SQUARESIZE + 10,
+				text.c_str(),
+				BOARDCOL + SQUARESIZE * 3,
+				SCREENHEIGHT - HALFSQUARESIZE + 10,
 				20,
 				BLUE);
-#else
-			DrawText(
-				"zetten:",
-				HALFSQUARESIZE,
-				HALFSQUARESIZE + 11 * SQUARESIZE + 10,
-				20,
-				BLUE);
-#endif
 			std::string nodestr = std::to_string(nodes);
+			text = "nodes:" + nodestr;
 			DrawText(
-				nodestr.c_str(),
-				SQUARESIZE + HALFSQUARESIZE,
-				HALFSQUARESIZE + 11 * SQUARESIZE + 10,
+				text.c_str(),
+				BOARDCOL + SQUARESIZE * 6,
+				SCREENHEIGHT - HALFSQUARESIZE + 10,
 				20,
 				BLUE);
 		}
@@ -574,25 +544,25 @@ int main()
 
 		if (IsKeyPressed(KEY_M) && gamestate == 0)
 		{
-			game_level = 0;
+			game_level = 1;
 			continue;
 		}
 
 		if (IsKeyPressed(KEY_G) && gamestate == 0)
 		{
-			game_level = 1;
+			game_level = 2;
 			continue;
 		}
 
 		if (IsKeyPressed(KEY_H) && gamestate == 0)
 		{
-			game_level = 2;
+			game_level = 4;
 			continue;
 		}
 
 		if (IsKeyPressed(KEY_E) && gamestate == 0)
 		{
-			game_level = 3;
+			game_level = 8;
 			continue;
 		}
 
@@ -699,22 +669,22 @@ int main()
 				}
 				if (x >= 140 && x < 160 && y >= 220 && y < 240)
 				{
-					game_level = 0;
+					game_level = 1;
 					continue;
 				}
 				if (x >= 140 && x < 160 && y >= 240 && y < 260)
 				{
-					game_level = 1;
+					game_level = 2;
 					continue;
 				}
 				if (x >= 140 && x < 160 && y >= 260 && y < 280)
 				{
-					game_level = 2;
+					game_level = 4;
 					continue;
 				}
 				if (x >= 140 && x < 160 && y >= 280 && y < 300)
 				{
-					game_level = 3;
+					game_level = 8;
 					continue;
 				}
 				if (x >= 100 && x < 125 && y >= 300 && y < 325)
@@ -786,17 +756,16 @@ int main()
 			}
 			else
 			{
-				max_depth = 6 + game_level * 2;
-				Board b = Board(board);
-				nodes = 0;
-
+				max_depth = 4 + game_level * 2;
 				if (!taskrunning)
 				{
+					Board b = Board(board);
+					nodes = 0;
 					// task(&b);
 					std::thread t(task, &b);
-					t.join();
+					t.detach();
 				}
-				if (taskready)
+				else if (taskready)
 				{
 					game_moves.push_back(bestmove);
 					board.DoMove(board.GetSide(), bestmove);
@@ -804,6 +773,7 @@ int main()
 					board.SetSide(board.GetSide() ^ 1);
 					ml = board.Generate(board.GetSide());
 					taskready = false;
+					taskrunning = false;
 				}
 			}
 		}
