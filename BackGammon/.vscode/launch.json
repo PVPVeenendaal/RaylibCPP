@@ -8,7 +8,7 @@
             "name": "(lldb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/backgammon.exe",
+            "program": "${workspaceFolder}/debbackgammon",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

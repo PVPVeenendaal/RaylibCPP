@@ -1,13 +1,14 @@
 #include <iostream>
 #include <raylib.h>
 #include <string>
-#include <thread>
+#include <future>
+#include <chrono>
 #include <vector>
 #include "board.h"
 #include "move.h"
 
 // version
-const std::string version = "1.00";
+const std::string version = "1.01";
 
 // draw
 const int SQUARESIZE = 72;
@@ -96,6 +97,7 @@ int main()
 	board = Board();
 	board.InitBoard();
 	bestval = board.Evaluate();
+	std::future<void> f;
 
 	ml = board.Generate(board.GetSide());
 	InitWindow(SCREENWIDTH, SCREENHEIGHT, title.c_str());
@@ -761,12 +763,11 @@ int main()
 				{
 					Board b = Board(board);
 					nodes = 0;
-					// task(&b);
-					std::thread t(task, &b);
-					t.detach();
+					f = std::async(std::launch::async, task, &b);
 				}
 				else if (taskready)
 				{
+					f.get();
 					game_moves.push_back(bestmove);
 					board.DoMove(board.GetSide(), bestmove);
 					keuze = 1;

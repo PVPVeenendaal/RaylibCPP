@@ -8,7 +8,7 @@
         "name": "(lldb) Launch",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/draughts.exe",
+        "program": "${workspaceFolder}/debdraughts",
         "args": [],
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
