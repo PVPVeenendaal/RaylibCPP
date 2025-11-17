@@ -1,8 +1,12 @@
 #include <iostream>
 #include <raylib.h>
 #include <string>
+#ifdef _WIN64
+#include <pthread.h>
+#else
 #include <future>
 #include <chrono>
+#endif
 #include <vector>
 #include "board.h"
 #include "move.h"
@@ -67,7 +71,11 @@ enum ePlayer
 	AI,
 };
 
+#ifdef _WIN64
+void *task(void* arg)
+#else
 void task(Board *b)
+#endif
 {
 	taskrunning = true;
 	taskready = false;
@@ -75,13 +83,19 @@ void task(Board *b)
 #ifndef NDEBUG
 	std::cout << "task running" << std::endl;
 #endif
-
+#ifdef _WIN64
+	Board b = Board(board);	
+	bestval = b.BestEval(0, -MAXEVAL, MAXEVAL);
+#else
 	bestval = b->BestEval(0, -MAXEVAL, MAXEVAL);
-
+#endif
 #ifndef NDEBUG
 	std::cout << "task ready" << std::endl;
 #endif
 	taskready = true;
+#ifdef _WIN64
+	return nullptr;
+#endif
 }
 
 // Main program
@@ -97,8 +111,11 @@ int main()
 	board = Board();
 	board.InitBoard();
 	bestval = board.Evaluate();
-	std::future<void> f;
-
+	#ifdef _WIN64
+		pthread_t thread;
+	#else	
+		std::future<void> f;
+	#endif
 	ml = board.Generate(board.GetSide());
 	InitWindow(SCREENWIDTH, SCREENHEIGHT, title.c_str());
 	Texture2D enterbutton = LoadTexture("./assets/Enter.png");
@@ -467,7 +484,7 @@ int main()
 				DARKBLUE);
 			int minidx = game_moves.size() > 78 ? game_moves.size() - 78 : 0;
 			int vert = HALFSQUARESIZE + 20;
-			for (int i = minidx; i < game_moves.size(); i += 2)
+			for (int i = minidx; i < (int)game_moves.size(); i += 2)
 			{
 				std::string num = std::to_string((int)(i / 2) + 1);
 				vert += 20;
@@ -477,7 +494,7 @@ int main()
 					vert,
 					20,
 					DARKBLUE);
-				if (game_moves.size() > i)
+				if ((int)game_moves.size() > i)
 				{
 					Move m = game_moves[i];
 					DrawText(
@@ -487,7 +504,7 @@ int main()
 						20,
 						DARKBLUE);
 				}
-				if (game_moves.size() > i + 1)
+				if ((int)game_moves.size() > i + 1)
 				{
 					Move m = game_moves[i + 1];
 					DrawText(
@@ -546,25 +563,25 @@ int main()
 
 		if (IsKeyPressed(KEY_M) && gamestate == 0)
 		{
-			game_level = 1;
+			game_level = 0;
 			continue;
 		}
 
 		if (IsKeyPressed(KEY_G) && gamestate == 0)
 		{
-			game_level = 2;
+			game_level = 1;
 			continue;
 		}
 
 		if (IsKeyPressed(KEY_H) && gamestate == 0)
 		{
-			game_level = 4;
+			game_level = 2;
 			continue;
 		}
 
 		if (IsKeyPressed(KEY_E) && gamestate == 0)
 		{
-			game_level = 8;
+			game_level = 3;
 			continue;
 		}
 
@@ -596,7 +613,7 @@ int main()
 		{
 			if (board.GetSide() == playercolor[DPLAYER])
 			{
-				if (ml.size() > 0 && keuze < ml.size())
+				if (ml.size() > 0 && keuze < (int)ml.size())
 				{
 					keuze += 1;
 				}
@@ -635,7 +652,7 @@ int main()
 			continue;
 		}
 
-		if (IsKeyPressed(KEY_F7) && ml.size() > 0 && game_moves.size() > playercolor[DPLAYER] && board.GetSide() == playercolor[DPLAYER] && gamestate == 1 && !board.GetGameState())
+		if (IsKeyPressed(KEY_F7) && ml.size() > 0 && (int)game_moves.size() > playercolor[DPLAYER] && board.GetSide() == playercolor[DPLAYER] && gamestate == 1 && !board.GetGameState())
 		{
 			for (int i = 0; i < 2; ++i)
 			{
@@ -671,22 +688,22 @@ int main()
 				}
 				if (x >= 140 && x < 160 && y >= 220 && y < 240)
 				{
-					game_level = 1;
+					game_level = 0;
 					continue;
 				}
 				if (x >= 140 && x < 160 && y >= 240 && y < 260)
 				{
-					game_level = 2;
+					game_level = 1;
 					continue;
 				}
 				if (x >= 140 && x < 160 && y >= 260 && y < 280)
 				{
-					game_level = 4;
+					game_level = 2;
 					continue;
 				}
 				if (x >= 140 && x < 160 && y >= 280 && y < 300)
 				{
-					game_level = 8;
+					game_level = 3;
 					continue;
 				}
 				if (x >= 100 && x < 125 && y >= 300 && y < 325)
@@ -713,7 +730,7 @@ int main()
 				{
 					if (board.GetSide() == playercolor[DPLAYER])
 					{
-						if (ml.size() > 0 && keuze < ml.size())
+						if (ml.size() > 0 && keuze < (int)ml.size())
 						{
 							keuze += 1;
 						}
@@ -758,16 +775,28 @@ int main()
 			}
 			else
 			{
-				max_depth = 4 + game_level * 2;
+				int md[4] = {5, 7, 9, 11};
+				max_depth = md[game_level];
 				if (!taskrunning)
 				{
-					Board b = Board(board);
 					nodes = 0;
+#ifdef _WIN64
+					// start the thread
+                    pthread_create(&thread, nullptr, task, nullptr);
+                    // forget that the thread is started, the task task_ready indicates when the thread is finished
+					//pthread_join(thread, nullptr);
+                    pthread_detach(thread);
+					
+#else				
+					Board b = Board(board);
 					f = std::async(std::launch::async, task, &b);
+#endif
 				}
 				else if (taskready)
 				{
+#ifndef _WIN64
 					f.get();
+#endif
 					game_moves.push_back(bestmove);
 					board.DoMove(board.GetSide(), bestmove);
 					keuze = 1;
@@ -1452,9 +1481,9 @@ std::string Move::ToString()
 {
 	if (Step > 0)
 	{
-		return BOARDTEXT[MoveData[SQF][SQR]] + " x " + BOARDTEXT[MoveData[SQT][SQR]];
+		return BOARDTEXT[(int)MoveData[SQF][SQR]] + " x " + BOARDTEXT[(int)MoveData[SQT][SQR]];
 	}
-	return BOARDTEXT[MoveData[SQF][SQR]] + " - " + BOARDTEXT[MoveData[SQT][SQR]];
+	return BOARDTEXT[(int)MoveData[SQF][SQR]] + " - " + BOARDTEXT[(int)MoveData[SQT][SQR]];
 }
 
 // ************************** end Move ****************************************
