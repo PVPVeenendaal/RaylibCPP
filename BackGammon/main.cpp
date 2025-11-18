@@ -19,6 +19,8 @@
     }
 #endif
 
+//#define TEST
+
 // version
 const std::string version = "0.90";
 
@@ -358,7 +360,6 @@ int main()
     // main loop
     while (!WindowShouldClose())
     {
-        // Update
         // Keypress
         int key = GetKeyPressed();
         if (key > 0)
@@ -459,6 +460,19 @@ void Game_t::InitGame()
         }
     }
     // beginopstelling
+#ifdef TEST
+    board[22] = -1;
+    board[7] = 1;
+    board[8] = 3;
+    board[9] = 3;
+    board[10] = 1;
+    board[13] = 2;
+    board[14] = 2;
+    board[17] = 1;
+    board[19] = 2;
+    uitgenomen[Ai] = -14;
+    speler_ad_beurt = BGSpeler;
+#else
     board[1] = -2;
     board[6] = 5;
     board[8] = 3;
@@ -467,6 +481,7 @@ void Game_t::InitGame()
     board[17] = -3;
     board[19] = -5;
     board[24] = 2;
+#endif
 #ifndef NDEBUG
     Zet zet = Zet();
     bestescore = BepaalScore(&zet);
@@ -519,6 +534,11 @@ void Game_t::Dice_Roll()
     ogen[1] = 1;
     ogen[0] = GetRandomValue(1, 6); // zet uit bij een test
     ogen[1] = GetRandomValue(1, 6); // zet uit bij een test
+#endif
+#ifdef TEST
+    ogen[0] = 3;
+    ogen[1] = 1;
+    BepaalZetten(BGSpeler);
 #endif
     tekstinfo = "";
     if (ogen[1] > ogen[0])
@@ -580,11 +600,19 @@ void Game_t::Do_Ai_Move()
     }
     BesteZet(Ai);
     DoeZet(Ai, &bestezet); // geen score meer nodig
-    opening = false;
-    aigezet = true;
-    tekstinfo = "Ai is klaar met zijn beurt";
-    instructie = "Klik op F6 om verder te gaan";
-    spelstatus = Spelerstop;
+    if (ABS(uitgenomen[Ai]) == 15)
+    {
+        spelstatus = Spelstop;
+        speler_winnaar = Ai;
+    }
+    else
+    {
+        opening = false;
+        aigezet = true;
+        tekstinfo = "Ai is klaar met zijn beurt";
+        instructie = "Klik op F6 om verder te gaan";
+        spelstatus = Spelerstop;
+    }
 }
 
 /// @brief Constructor
@@ -1091,11 +1119,16 @@ void Game_t::Update()
     }
     if (spelstatus == Spelerspeel)
     {
-        if (speler_ad_beurt != BGSpeler)
+        if (ABS(uitgenomen[speler_ad_beurt]) == 15)
+        {
+            spelstatus = Spelerstop;
+            speler_continue = true;
+        }
+        else if (speler_ad_beurt != BGSpeler)
         {
             Do_Ai_Move();
+            return;
         }
-        return;
     }
     if (spelstatus == Spelerstop)
     {
@@ -1109,9 +1142,9 @@ void Game_t::Update()
             else
             {
                 spelstatus = Spelerstart;
+                return;
             }
         }
-        return;
     }
     if (spelstatus == Spelstop)
     {
