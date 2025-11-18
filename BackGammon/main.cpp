@@ -20,9 +20,12 @@
 #endif
 
 //#define TEST
+#ifdef TEST
+#define BGSPELER
+#endif
 
 // version
-const std::string version = "0.90";
+const std::string version = "1.00";
 
 // sizes
 
@@ -459,8 +462,21 @@ void Game_t::InitGame()
             ogen[i] = 0;
         }
     }
-    // beginopstelling
 #ifdef TEST
+#ifdef BGSPELER
+    // speler gaat uit;
+    board[3] = 1;
+    board[7] = -1;
+    board[8] = -3;
+    board[9] = -3;
+    board[10] = -1;
+    board[13] = -2;
+    board[14] = -2;
+    board[17] = -1;
+    board[19] = -2;
+    uitgenomen[BGSpeler] = 14;
+#else
+    // ai gaat uit
     board[22] = -1;
     board[7] = 1;
     board[8] = 3;
@@ -472,7 +488,10 @@ void Game_t::InitGame()
     board[19] = 2;
     uitgenomen[Ai] = -14;
     speler_ad_beurt = BGSpeler;
+    // speler gaat uit;
+#endif
 #else
+    // beginopstelling
     board[1] = -2;
     board[6] = 5;
     board[8] = 3;
@@ -759,8 +778,7 @@ void Game_t::MousePress(int x, int y)
     if (x >= 20 && x < 1580 && y >= 20 && y < 776 && spelstatus == Spelerspeel && speler_ad_beurt == BGSpeler)
     {
         int kegelpos = -1;
-        int slagpos = -1;
-
+        
         if (geslagen[BGSpeler] > 0)
         {
             if (kegel_sel_from == -1)
@@ -1808,8 +1826,7 @@ void Game_t::BepaalVervolgStappen(int speler)
 /// @param speler Ai of Speler
 void Game_t::BepaalStappenVerplaatst(int speler, int index)
 {
-    int opp = Niemand, van = 0, van2 = 0, naar = 0, naar2 = 0;
-    Stap stap;
+    int opp = Niemand, van = 0, naar = 0;
     Zet zet = Zet();
     int dobbel = TelDobbelstenen();
 
@@ -1869,7 +1886,7 @@ void Game_t::BepaalStappenVerplaatst(int speler, int index)
 /// @param index 0..3
 void Game_t::BepaalStappenTeruggezet(int speler, int index)
 {
-    int opp = Niemand, n = 0;
+    int opp = Niemand/*, n = 0*/;
     Zet zet = Zet();
     int dobbel = TelDobbelstenen();
 
@@ -2031,7 +2048,6 @@ void Game_t::AddStap(Stap stap, Zet *zet)
 /// @parem cz Pointer naar beste zet of zoek zet
 void Game_t::DoeZet(int speler, Zet *zet)
 {
-    int steen, slagsteen;
     int opp = 3 - speler;
 
     for (int i = 0; i < zet->stapteller; ++i)
@@ -2077,7 +2093,6 @@ void Game_t::DoeZet(int speler, Zet *zet)
 /// @param zet pointer naar Zet
 void Game_t::NeemZetTerug(int speler, Zet *zet)
 {
-    int steen, slagsteen;
     int opp = 3 - speler;
 
     for (int i = zet->stapteller - 1; i >= 0; --i)
@@ -2119,8 +2134,8 @@ void Game_t::NeemZetTerug(int speler, Zet *zet)
 void Game_t::BesteZet(int speler)
 {
     bestescore = 999999;
-    int dobbel = 0;
-    int size = zetten.size();
+    //int dobbel = 0;
+    //int size = zetten.size();
     int sn;
     Zet zet;
 
@@ -2478,7 +2493,7 @@ void Game_t::BesteZet(int speler)
     // zoek beste zet
     for (auto zet : zetten)
     {
-        if (zet.score < bestescore || zet.score == bestescore && GetRandomValue(1, 10) < 6)
+        if (zet.score < bestescore || (zet.score == bestescore && GetRandomValue(1, 10) < 6))
         {
             bestezet = zet;
             bestescore = zet.score;
