@@ -28,15 +28,11 @@
 const std::string version = "1.00";
 
 // sizes
-
-const int BOARD_SIZE = 740;
-const int DICE_SIZE = 225;
 const int KOLOM_SIZE = 90;
 const int REST_SIZE = 10;
 const int VERTICALLINE_SIZE = 20;
 const int SCREEN_WIDTH_SIZE = 1600;
 const int SCREEN_HEIGHT_SIZE = 900;
-const int STONE_RADIUS = 28;
 
 // correctie single stone
 

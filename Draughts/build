@@ -1,7 +1,7 @@
 Mac:
 
 Debug:
-eval g++ main.cpp -g -O0 -framework IOKit -framework Cocoa -framework OpenGL $(pkg-config --libs --cflags raylib) -o debdraughts
+eval g++ main.cpp -g -O0 -Wall -framework IOKit -framework Cocoa -framework OpenGL $(pkg-config --libs --cflags raylib) -o debdraughts
 Release:
 eval g++ main.cpp -O2 -DNDEBUG -framework IOKit -framework Cocoa -framework OpenGL $(pkg-config --libs --cflags raylib) -o macdraughts
 

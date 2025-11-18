@@ -22,7 +22,6 @@ const int TEXTROW = 25;
 // search
 const int WINDOW_LENGTH = 4;
 const int MAX_DEPTH = 5;
-const int INF = 2147483647;
 const int MAXMV = 1000000000;
 const int NONE = -1;
 

@@ -36,7 +36,6 @@ const int MAX_MANCHES = 16;
 const int MAX_MANCHES = 2;
 #endif
 const int NO_VALUE = -1;
-const int LAATSTE_SLAG = 10;
 
 // spelers
 enum
@@ -131,7 +130,6 @@ enum
 	spelstop,
 };
 
-const int troefkleuren[4] = {klaveren, harten, schoppen, ruiten};
 const int puntenkaart[8] = {0, 0, 0, 10, 2, 3, 4, 11};	 // 7,8,9,10,B,V,K,A
 const int puntentroef[8] = {0, 0, 14, 10, 20, 3, 4, 11}; // 7,8,9,10,B,V,K,A
 const int kaartrang[8] = {1, 2, 3, 7, 4, 5, 6, 8};		 // 7,8,9,10,B,V,K,A

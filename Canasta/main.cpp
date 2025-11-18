@@ -1195,7 +1195,6 @@ bool Game_t::Trekkaart(int ontvanger, bool show)
 /// @param speler eSpeler, speler aan de beurt
 void Game_t::Do_Ai_Move(int speler)
 {
-    int team = Teamid[speler_ad_beurt];
     if (spelstatus == Spelertrekkaart)
     {
         Do_Ai_Trekkaart(speler);
@@ -1776,8 +1775,6 @@ bool Game_t::KanAllesUitleggen(int speler)
 /// @param speler eSpeler
 void Game_t::LegAllesUit(int speler)
 {
-    int team = Teamid[speler];
-    
     do
     {
         VulTypeKaarten(speler);
@@ -2647,7 +2644,6 @@ void Game_t::Update()
         {
             speler_ad_beurt = Noord;
         }
-        int team = Teamid[speler_ad_beurt];
         if (speler_ad_beurt != Zuid)
         {
             tekstinfo = "";
@@ -2701,7 +2697,6 @@ void Game_t::Update()
     {
         if (speler_winnaar >= Noord && speler_winnaar <= West)
         {
-            int team = Teamid[speler_winnaar];
             tekstinfo = "Ronde is afgelopen, " + SpelerNaam[speler_winnaar] + " heeft alles uitgelegd..., click op F6 om verder te gaan";
         }
         else
